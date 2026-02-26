@@ -6,8 +6,6 @@ Flask application with comprehensive security and functional features
 from flask import Flask, render_template, request, redirect, url_for, session, send_file, jsonify
 from flask_wtf.csrf import CSRFProtect
 from flask_cors import CORS
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 
 from models import db, User, Document, Tag, SyncFilter, Notification, EmailAlert, AuditLog, LoginHistory, DocumentApproval
 from config import Config
@@ -38,7 +36,7 @@ db.init_app(app)
 csrf = CSRFProtect(app)
 CORS(app, origins=Config.CORS_ORIGINS)
 
-# Rate limiting - create a dummy limiter that does nothing
+# Rate limiting disabled - dummy limiter that does nothing
 class DummyLimiter:
     def limit(self, *args, **kwargs):
         def decorator(f):
