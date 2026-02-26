@@ -26,7 +26,7 @@ class Config:
     
     # Session Security
     PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
-    SESSION_COOKIE_SECURE = True  # Only send over HTTPS
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'false').lower() == 'true'  # Only send over HTTPS
     SESSION_COOKIE_HTTPONLY = True  # Not accessible to JavaScript
     SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
     SESSION_REFRESH_EACH_REQUEST = True
