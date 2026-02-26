@@ -353,49 +353,60 @@ def index():
 @login_required
 def dashboard():
     """Main dashboard with analytics"""
-    user = get_current_user()
-    user_id = user.id
+    try:
+        user = get_current_user()
+        user_id = user.id
+        
+        # Get document statistics
+        total_docs = Document.query.filter_by(user_id=user_id).count()
+        incoming = Document.query.filter_by(user_id=user_id, direction='incoming').count()
+        outgoing = Document.query.filter_by(user_id=user_id, direction='outgoing').count()
+        archived = Document.query.filter_by(user_id=user_id, is_archived=True).count()
+        
+        # Get recent documents
+        recent_docs = Document.query.filter_by(user_id=user_id)\
+            .order_by(Document.created_at.desc()).limit(10).all()
+        
+        # Get unread notifications
+        unread_notifications = Notification.query.filter_by(user_id=user_id, is_read=False).all()
+        
+        # Get email statistics - with error handling
+        try:
+            stats = AnalyticsService.get_user_stats(user_id, days=7)
+        except Exception as stats_error:
+            print(f"[WARNING] Analytics error: {stats_error}")
+            stats = []
+        
+        # Get approval data based on role
+        pending_approvals = []
+        filed_count = archived
+        
+        if user.role == 'admin':
+            # Show pending approvals for admins
+            pending_approvals = DocumentApproval.query.filter_by(status='pending')\
+                .order_by(DocumentApproval.requested_at.desc()).limit(5).all()
+        else:
+            # Show user's pending approvals
+            pending_approvals = DocumentApproval.query.filter_by(requester_id=user_id)\
+                .order_by(DocumentApproval.requested_at.desc()).limit(5).all()
+            filed_count = Document.query.filter_by(user_id=user_id, status='filed').count()
+        
+        return render_template('dashboard.html',
+                             user=user,
+                             total_docs=total_docs,
+                             incoming_count=incoming,
+                             outgoing_count=outgoing,
+                             filed_count=filed_count,
+                             recent_docs=recent_docs,
+                             notifications=unread_notifications,
+                             stats=stats,
+                             pending_approvals=pending_approvals)
     
-    # Get document statistics
-    total_docs = Document.query.filter_by(user_id=user_id).count()
-    incoming = Document.query.filter_by(user_id=user_id, direction='incoming').count()
-    outgoing = Document.query.filter_by(user_id=user_id, direction='outgoing').count()
-    archived = Document.query.filter_by(user_id=user_id, is_archived=True).count()
-    
-    # Get recent documents
-    recent_docs = Document.query.filter_by(user_id=user_id)\
-        .order_by(Document.created_at.desc()).limit(10).all()
-    
-    # Get unread notifications
-    unread_notifications = Notification.query.filter_by(user_id=user_id, is_read=False).all()
-    
-    # Get email statistics
-    stats = AnalyticsService.get_user_stats(user_id, days=7)
-    
-    # Get approval data based on role
-    pending_approvals = []
-    filed_count = archived
-    
-    if user.role == 'admin':
-        # Show pending approvals for admins
-        pending_approvals = DocumentApproval.query.filter_by(status='pending')\
-            .order_by(DocumentApproval.requested_at.desc()).limit(5).all()
-    else:
-        # Show user's pending approvals
-        pending_approvals = DocumentApproval.query.filter_by(requester_id=user_id)\
-            .order_by(DocumentApproval.requested_at.desc()).limit(5).all()
-        filed_count = Document.query.filter_by(user_id=user_id, status='filed').count()
-    
-    return render_template('dashboard.html',
-                         user=user,
-                         total_docs=total_docs,
-                         incoming_count=incoming,
-                         outgoing_count=outgoing,
-                         filed_count=filed_count,
-                         recent_docs=recent_docs,
-                         notifications=unread_notifications,
-                         stats=stats,
-                         pending_approvals=pending_approvals)
+    except Exception as e:
+        print(f"[ERROR] Dashboard error: {e}")
+        import traceback
+        traceback.print_exc()
+        return render_template('error.html', error=f'Dashboard error: {str(e)}', code=500), 500
 
 
 @app.route('/documents')
