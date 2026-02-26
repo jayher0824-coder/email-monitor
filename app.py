@@ -38,12 +38,14 @@ db.init_app(app)
 csrf = CSRFProtect(app)
 CORS(app, origins=Config.CORS_ORIGINS)
 
-# Rate limiting disabled
-# limiter = Limiter(
-#     app=app,
-#     key_func=get_remote_address,
-#     default_limits=["200 per day", "50 per hour"]
-# )
+# Rate limiting - create a dummy limiter that does nothing
+class DummyLimiter:
+    def limit(self, *args, **kwargs):
+        def decorator(f):
+            return f
+        return decorator
+
+limiter = DummyLimiter()
 
 # Create uploads directory
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
