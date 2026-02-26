@@ -662,7 +662,7 @@ function handleResetPassword(event) {
     }
     
     // Send request to backend
-    fetch('/admin/user/' + userId + '/password', {
+    fetch('/admin/user/' + userId + '/reset-password', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -673,11 +673,11 @@ function handleResetPassword(event) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('✓ Password reset successfully!');
+            alert('✓ Password reset successfully! Temp password generated.');
             closeModal('resetPasswordModal');
             location.reload();
         } else {
-            alert('✗ Error: ' + data.error);
+            alert('✗ Error: ' + (data.error || data.message || 'Unknown error'));
         }
     })
     .catch(error => {
@@ -761,13 +761,15 @@ function deactivateUser(userId, email) {
 }
 
 function updateUserStatus(userId, isActive) {
-    fetch('/admin/user/' + userId + '/status', {
+    const endpoint = isActive ? '/admin/user/' + userId + '/activate' : '/admin/user/' + userId + '/deactivate';
+    
+    fetch(endpoint, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
         },
-        body: JSON.stringify({ is_active: isActive })
+        body: JSON.stringify({})
     })
     .then(response => response.json())
     .then(data => {
@@ -775,7 +777,7 @@ function updateUserStatus(userId, isActive) {
             alert('✓ User status updated successfully!');
             location.reload();
         } else {
-            alert('✗ Error: ' + data.error);
+            alert('✗ Error: ' + (data.error || data.message || 'Unknown error'));
         }
     })
     .catch(error => {
