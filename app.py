@@ -36,6 +36,15 @@ db.init_app(app)
 csrf = CSRFProtect(app)
 CORS(app, origins=Config.CORS_ORIGINS)
 
+# ==================== GOOGLE SITE VERIFICATION ====================
+@app.route('/google<token>.html')
+def google_site_verification(token):
+    """Serve Google Search Console domain verification file."""
+    expected = os.environ.get('GOOGLE_SITE_VERIFICATION', '')
+    if expected and token == expected:
+        return f'google-site-verification: google{token}.html', 200, {'Content-Type': 'text/html'}
+    return '', 404
+
 # Trust proxy headers from Render
 # This is needed to properly detect HTTPS when behind a reverse proxy
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -333,7 +342,8 @@ def index():
     if 'user_id' in session:
         return redirect(url_for('dashboard'))
     # Show public homepage instead of redirecting to login
-    return render_template('home.html')
+    return render_template('home.html',
+        google_site_verification=os.environ.get('GOOGLE_SITE_VERIFICATION', ''))
 
 
 @app.route('/dashboard')
