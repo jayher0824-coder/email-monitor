@@ -3,27 +3,38 @@
 {% block title %}Settings{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-md-3">
-            <div class="list-group">
-                <a href="#profile" class="list-group-item list-group-item-action active" data-bs-toggle="list">Profile</a>
-                <a href="#security" class="list-group-item list-group-item-action" data-bs-toggle="list">Security</a>
-                <a href="#notifications" class="list-group-item list-group-item-action" data-bs-toggle="list">Notifications</a>
-                <a href="#gmail" class="list-group-item list-group-item-action" data-bs-toggle="list">
-                    <i class="fab fa-google"></i> Gmail Integration
-                </a>
-            </div>
+<div class="settings-page">
+    <div class="settings-header">
+        <h1>⚙️ Settings</h1>
+        <p>Manage your account preferences and integrations</p>
+    </div>
+
+    <div class="settings-layout">
+        <!-- Sidebar -->
+        <div class="settings-sidebar">
+            <a href="#profile" class="settings-nav-item active" data-bs-toggle="list">
+                👤 Profile
+            </a>
+            <a href="#security" class="settings-nav-item" data-bs-toggle="list">
+                🔒 Security
+            </a>
+            <a href="#notifications" class="settings-nav-item" data-bs-toggle="list">
+                🔔 Notifications
+            </a>
+            <a href="#gmail" class="settings-nav-item" data-bs-toggle="list">
+                📧 Gmail Integration
+            </a>
         </div>
-        
-        <div class="col-md-9">
+
+        <!-- Content Panels -->
+        <div class="settings-content tab-content">
             <!-- Profile Settings -->
             <div class="tab-pane fade show active" id="profile">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Profile Information</h5>
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <h5>👤 Profile Information</h5>
                     </div>
-                    <div class="card-body">
+                    <div class="settings-card-body">
                         <form method="POST" action="{{ url_for('update_profile') }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             
@@ -69,20 +80,21 @@
             
             <!-- Security Settings -->
             <div class="tab-pane fade" id="security">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">Change Password</h5>
+                <div class="settings-card" style="margin-bottom:20px">
+                    <div class="settings-card-header">
+                        <h5>🔑 Change Password</h5>
                     </div>
-                    <div class="card-body">
+                    <div class="settings-card-body">
+                        <p style="color:var(--gray-color);margin-bottom:16px">Update your account password regularly to keep your account secure.</p>
                         <a href="{{ url_for('change_password') }}" class="btn btn-primary">Change Password</a>
                     </div>
                 </div>
                 
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Two-Factor Authentication</h5>
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <h5>🛡️ Two-Factor Authentication</h5>
                     </div>
-                    <div class="card-body">
+                    <div class="settings-card-body">
                         {% if user.two_factor_enabled %}
                         <p class="text-success"><i class="bi bi-check-circle"></i> Two-factor authentication is enabled</p>
                         <p class="text-muted">Your account is protected with 2FA using TOTP.</p>
@@ -93,7 +105,6 @@
                         {% else %}
                         <p class="text-warning"><i class="bi bi-exclamation-triangle"></i> Two-factor authentication is not enabled</p>
                         <p>Secure your account with two-factor authentication.</p>
-                        <a href="{{ url_for('setup_2fa') }}" class="btn btn-primary">Enable 2FA</a>
                         {% endif %}
                     </div>
                 </div>
@@ -101,11 +112,11 @@
             
             <!-- Notification Settings -->
             <div class="tab-pane fade" id="notifications">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Notification Preferences</h5>
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <h5>🔔 Notification Preferences</h5>
                     </div>
-                    <div class="card-body">
+                    <div class="settings-card-body">
                         <p class="text-muted">Configure how you receive notifications</p>
                         <div class="form-check mb-3">
                             <input class="form-check-input" type="checkbox" id="email_notif" {% if user.email_notifications %}checked{% endif %}>
@@ -125,11 +136,11 @@
 
             <!-- Gmail Integration Settings -->
             <div class="tab-pane fade" id="gmail">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="fab fa-google"></i> Gmail Integration</h5>
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <h5>📧 Gmail Integration</h5>
                     </div>
-                    <div class="card-body">
+                    <div class="settings-card-body">
                         {% if user.gmail_connected %}
                         <div class="alert alert-success" role="alert">
                             <i class="fas fa-check-circle"></i>
@@ -175,7 +186,106 @@
     </div>
 </div>
 
-<script>
+<style>
+.settings-page {
+    max-width: 1100px;
+    margin: 30px auto;
+    padding: 0 20px;
+}
+
+.settings-header {
+    margin-bottom: 28px;
+}
+
+.settings-header h1 {
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--dark-color);
+    margin: 0 0 4px;
+}
+
+.settings-header p {
+    color: var(--gray-color);
+    margin: 0;
+}
+
+.settings-layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+/* Sidebar */
+.settings-sidebar {
+    flex: 0 0 210px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    position: sticky;
+    top: 90px;
+}
+
+.settings-nav-item {
+    display: block;
+    padding: 14px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-color);
+    text-decoration: none;
+    border-left: 4px solid transparent;
+    transition: all 0.2s;
+}
+
+.settings-nav-item:hover {
+    background: var(--light-color);
+    color: var(--primary-color);
+    border-left-color: var(--primary-color);
+}
+
+.settings-nav-item.active {
+    background: #eff6ff;
+    color: var(--primary-color);
+    border-left-color: var(--primary-color);
+}
+
+/* Content */
+.settings-content {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Settings Cards */
+.settings-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.settings-card-header {
+    padding: 18px 24px;
+    background: linear-gradient(135deg, var(--primary-color), #3367D6);
+    color: white;
+}
+
+.settings-card-header h5 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.settings-card-body {
+    padding: 24px;
+}
+
+@media (max-width: 768px) {
+    .settings-layout { flex-direction: column; }
+    .settings-sidebar { flex: none; width: 100%; position: static; }
+}
+</style>
+{% endblock %}
 function manualSync() {
     const btn = event.target.closest('button');
     const originalText = btn.innerHTML;

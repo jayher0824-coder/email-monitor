@@ -3,138 +3,457 @@
 {% block title %}Documents{% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h2>Documents</h2>
+<div class="docs-page">
+    <!-- Page Header -->
+    <div class="docs-header">
+        <div class="docs-header-left">
+            <h1>📁 Documents</h1>
+            <p>Manage and organize your documents</p>
         </div>
-        <div class="col-md-4 text-end">
+        <div class="docs-header-right">
             <a href="{{ url_for('upload_document') }}" class="btn btn-primary">
-                <i class="bi bi-cloud-upload"></i> Upload Document
+                ⬆️ Upload Document
             </a>
         </div>
     </div>
-    
+
     <!-- Search & Filters -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="GET" class="row g-3">
-                <div class="col-md-5">
-                    <input type="text" name="search" class="form-control" placeholder="Search documents..." 
-                           value="{{ current_search }}">
-                </div>
-                <div class="col-md-2">
-                    <select name="direction" class="form-select">
-                        <option value="">All Directions</option>
-                        <option value="incoming" {% if current_direction == 'incoming' %}selected{% endif %}>Incoming</option>
-                        <option value="outgoing" {% if current_direction == 'outgoing' %}selected{% endif %}>Outgoing</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select name="priority" class="form-select">
-                        <option value="">All Priorities</option>
-                        <option value="low" {% if current_priority == 'low' %}selected{% endif %}>Low</option>
-                        <option value="normal" {% if current_priority == 'normal' %}selected{% endif %}>Normal</option>
-                        <option value="high" {% if current_priority == 'high' %}selected{% endif %}>High</option>
-                        <option value="urgent" {% if current_priority == 'urgent' %}selected{% endif %}>Urgent</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-primary w-100">Search</button>
-                </div>
-            </form>
-        </div>
+    <div class="docs-filters-card">
+        <form method="GET" class="docs-filters-form">
+            <div class="docs-filter-group docs-search-group">
+                <label class="docs-filter-label">Search</label>
+                <input type="text" name="search" class="docs-input" placeholder="Search documents..."
+                       value="{{ current_search }}">
+            </div>
+            <div class="docs-filter-group">
+                <label class="docs-filter-label">Direction</label>
+                <select name="direction" class="docs-select">
+                    <option value="">All Directions</option>
+                    <option value="incoming" {% if current_direction == 'incoming' %}selected{% endif %}>📥 Incoming</option>
+                    <option value="outgoing" {% if current_direction == 'outgoing' %}selected{% endif %}>📤 Outgoing</option>
+                </select>
+            </div>
+            <div class="docs-filter-group">
+                <label class="docs-filter-label">Priority</label>
+                <select name="priority" class="docs-select">
+                    <option value="">All Priorities</option>
+                    <option value="low" {% if current_priority == 'low' %}selected{% endif %}>🟢 Low</option>
+                    <option value="normal" {% if current_priority == 'normal' %}selected{% endif %}>🔵 Normal</option>
+                    <option value="high" {% if current_priority == 'high' %}selected{% endif %}>🟠 High</option>
+                    <option value="urgent" {% if current_priority == 'urgent' %}selected{% endif %}>🔴 Urgent</option>
+                </select>
+            </div>
+            <div class="docs-filter-group docs-filter-action">
+                <label class="docs-filter-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary docs-search-btn">🔍 Search</button>
+            </div>
+        </form>
     </div>
     
     <!-- Documents Table -->
-    <div class="card">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
+    <div class="docs-table-card">
+        {% if documents.items %}
+        <div class="docs-table-wrap">
+            <table class="docs-table">
+                <thead>
                     <tr>
-                        <th>Title</th>
-                        <th>Sender/Recipient</th>
+                        <th>📄 Title</th>
+                        <th>👤 Sender / Recipient</th>
                         <th>Direction</th>
                         <th>Priority</th>
-                        <th>Date</th>
+                        <th>📅 Date</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for doc in documents.items %}
-                    <tr>
-                        <td>
-                            <a href="{{ url_for('view_document', doc_id=doc.id) }}">{{ doc.title }}</a>
-                            {% if doc.is_favorite %}<i class="bi bi-star-fill text-warning"></i>{% endif %}
+                    <tr class="docs-row {% if doc.direction == 'incoming' %}row-in{% else %}row-out{% endif %}">
+                        <td class="docs-title-cell">
+                            <a href="{{ url_for('view_document', doc_id=doc.id) }}" class="docs-title-link">{{ doc.title }}</a>
+                            {% if doc.is_favorite %}<span class="star-icon">⭐</span>{% endif %}
                         </td>
-                        <td>
+                        <td class="docs-person-cell">
                             {% if doc.direction == 'incoming' %}
-                                {{ doc.sender }}
+                                📥 {{ doc.sender or '—' }}
                             {% else %}
-                                {{ doc.recipient }}
+                                📤 {{ doc.recipient or '—' }}
                             {% endif %}
                         </td>
                         <td>
                             {% if doc.direction == 'incoming' %}
-                                <span class="badge bg-info">Incoming</span>
+                                <span class="doc-badge badge-incoming">📥 Incoming</span>
                             {% else %}
-                                <span class="badge bg-success">Outgoing</span>
+                                <span class="doc-badge badge-outgoing">📤 Outgoing</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if doc.priority == 'urgent' %}
-                                <span class="badge bg-danger">Urgent</span>
+                                <span class="doc-badge badge-urgent">🔴 Urgent</span>
                             {% elif doc.priority == 'high' %}
-                                <span class="badge bg-warning text-dark">High</span>
+                                <span class="doc-badge badge-high">🟠 High</span>
                             {% elif doc.priority == 'low' %}
-                                <span class="badge bg-secondary">Low</span>
+                                <span class="doc-badge badge-low">🟢 Low</span>
                             {% else %}
-                                <span class="badge bg-info text-dark">Normal</span>
+                                <span class="doc-badge badge-normal">🔵 Normal</span>
                             {% endif %}
                         </td>
-                        <td>{{ doc.created_at.strftime('%Y-%m-%d') }}</td>
-                        <td>
-                            <a href="{{ url_for('view_document', doc_id=doc.id) }}" class="btn btn-sm btn-outline-primary">View</a>
-                            <a href="{{ url_for('download_document', doc_id=doc.id) }}" class="btn btn-sm btn-outline-success">Download</a>
+                        <td class="docs-date-cell">{{ doc.created_at.strftime('%b %d, %Y') }}</td>
+                        <td class="docs-actions-cell">
+                            <a href="{{ url_for('view_document', doc_id=doc.id) }}" class="doc-action-btn btn-view">👁 View</a>
+                            <a href="{{ url_for('download_document', doc_id=doc.id) }}" class="doc-action-btn btn-download">⬇ Download</a>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        {% else %}
+        <div class="docs-empty">
+            <div class="docs-empty-icon">📂</div>
+            <h3>No documents found</h3>
+            <p>Try adjusting your search filters, or upload your first document.</p>
+            <a href="{{ url_for('upload_document') }}" class="btn btn-primary">⬆ Upload Document</a>
+        </div>
+        {% endif %}
     </div>
-    
+
     <!-- Pagination -->
     {% if documents.pages > 1 %}
-    <nav class="mt-4">
-        <ul class="pagination justify-content-center">
-            {% if documents.has_prev %}
-            <li class="page-item">
-                <a class="page-link" href="{{ url_for('documents', page=documents.prev_num, search=current_search, direction=current_direction, priority=current_priority) }}">Previous</a>
-            </li>
-            {% endif %}
-            
-            {% for page_num in documents.iter_pages() %}
-                {% if page_num %}
-                    {% if page_num == documents.page %}
-                    <li class="page-item active">
-                        <span class="page-link">{{ page_num }}</span>
-                    </li>
-                    {% else %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url_for('documents', page=page_num, search=current_search, direction=current_direction, priority=current_priority) }}">{{ page_num }}</a>
-                    </li>
-                    {% endif %}
+    <div class="docs-pagination">
+        {% if documents.has_prev %}
+        <a class="docs-page-btn" href="{{ url_for('documents', page=documents.prev_num, search=current_search, direction=current_direction, priority=current_priority) }}">← Previous</a>
+        {% endif %}
+
+        {% for page_num in documents.iter_pages() %}
+            {% if page_num %}
+                {% if page_num == documents.page %}
+                <span class="docs-page-btn docs-page-active">{{ page_num }}</span>
+                {% else %}
+                <a class="docs-page-btn" href="{{ url_for('documents', page=page_num, search=current_search, direction=current_direction, priority=current_priority) }}">{{ page_num }}</a>
                 {% endif %}
-            {% endfor %}
-            
-            {% if documents.has_next %}
-            <li class="page-item">
-                <a class="page-link" href="{{ url_for('documents', page=documents.next_num, search=current_search, direction=current_direction, priority=current_priority) }}">Next</a>
-            </li>
+            {% else %}
+                <span class="docs-page-ellipsis">…</span>
             {% endif %}
-        </ul>
-    </nav>
+        {% endfor %}
+
+        {% if documents.has_next %}
+        <a class="docs-page-btn" href="{{ url_for('documents', page=documents.next_num, search=current_search, direction=current_direction, priority=current_priority) }}">Next →</a>
+        {% endif %}
+    </div>
     {% endif %}
 </div>
+
+<style>
+/* ── Documents Page Layout ── */
+.docs-page {
+    max-width: 1200px;
+    margin: 30px auto;
+    padding: 0 20px;
+}
+
+.docs-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+    gap: 16px;
+}
+
+.docs-header-left h1 {
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--dark-color);
+    margin: 0 0 4px;
+}
+
+.docs-header-left p {
+    color: var(--gray-color);
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+/* ── Filters Card ── */
+.docs-filters-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 22px 24px;
+    margin-bottom: 24px;
+}
+
+.docs-filters-form {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.docs-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 140px;
+}
+
+.docs-search-group {
+    flex: 2;
+    min-width: 200px;
+}
+
+.docs-filter-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--gray-color);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.docs-input,
+.docs-select {
+    padding: 10px 13px;
+    border: 1.5px solid var(--border-color);
+    border-radius: 7px;
+    font-size: 14px;
+    color: var(--dark-color);
+    background: var(--light-color);
+    transition: border-color 0.25s, box-shadow 0.25s;
+    width: 100%;
+}
+
+.docs-input:focus,
+.docs-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(66,133,244,0.12);
+    background: white;
+}
+
+.docs-filter-action {
+    flex: 0 0 auto;
+    min-width: 120px;
+}
+
+.docs-search-btn {
+    width: 100%;
+}
+
+/* ── Table Card ── */
+.docs-table-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+.docs-table-wrap {
+    overflow-x: auto;
+}
+
+.docs-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.docs-table thead tr {
+    background: linear-gradient(135deg, #f8f9fa, #eef0f3);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.docs-table thead th {
+    padding: 14px 16px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--gray-color);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.docs-table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.2s;
+}
+
+.docs-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.docs-table tbody tr:hover {
+    background: #f5f8ff;
+}
+
+.docs-table td {
+    padding: 13px 16px;
+    vertical-align: middle;
+    font-size: 14px;
+    color: var(--dark-color);
+}
+
+/* Row accent colors */
+.docs-row.row-in {
+    border-left: 4px solid var(--primary-color);
+}
+.docs-row.row-out {
+    border-left: 4px solid var(--secondary-color);
+}
+
+.docs-title-link {
+    font-weight: 600;
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.docs-title-link:hover {
+    color: #2d5fcf;
+    text-decoration: underline;
+}
+
+.star-icon {
+    margin-left: 5px;
+    font-size: 0.85rem;
+}
+
+.docs-person-cell {
+    color: var(--gray-color);
+    font-size: 13px;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.docs-date-cell {
+    color: var(--gray-color);
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+/* ── Doc Badges ── */
+.doc-badge {
+    display: inline-block;
+    padding: 4px 11px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badge-incoming  { background: #dbeafe; color: #1e40af; }
+.badge-outgoing  { background: #dcfce7; color: #166534; }
+.badge-urgent    { background: #fee2e2; color: #991b1b; }
+.badge-high      { background: #ffedd5; color: #9a3412; }
+.badge-normal    { background: #dbeafe; color: #1e40af; }
+.badge-low       { background: #dcfce7; color: #166534; }
+
+/* ── Action Buttons ── */
+.docs-actions-cell {
+    white-space: nowrap;
+    display: flex;
+    gap: 6px;
+}
+
+.doc-action-btn {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.btn-view {
+    background: #eff6ff;
+    color: var(--primary-color);
+    border: 1px solid #bfdbfe;
+}
+
+.btn-view:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-download {
+    background: #f0fdf4;
+    color: var(--secondary-color);
+    border: 1px solid #bbf7d0;
+}
+
+.btn-download:hover {
+    background: var(--secondary-color);
+    color: white;
+}
+
+/* ── Empty State ── */
+.docs-empty {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.docs-empty-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+}
+
+.docs-empty h3 {
+    color: var(--dark-color);
+    margin-bottom: 8px;
+}
+
+.docs-empty p {
+    color: var(--gray-color);
+    margin-bottom: 20px;
+}
+
+/* ── Pagination ── */
+.docs-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 10px 0 20px;
+}
+
+.docs-page-btn {
+    display: inline-block;
+    padding: 7px 14px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--primary-color);
+    background: white;
+    border: 1.5px solid var(--border-color);
+    transition: all 0.2s;
+}
+
+.docs-page-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.docs-page-active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.docs-page-ellipsis {
+    color: var(--gray-color);
+    padding: 0 4px;
+}
+
+@media (max-width: 768px) {
+    .docs-header { flex-direction: column; align-items: flex-start; }
+    .docs-filters-form { flex-direction: column; }
+    .docs-filter-group { min-width: 100%; }
+    .docs-actions-cell { flex-direction: column; gap: 4px; }
+}
+</style>
 {% endblock %}
