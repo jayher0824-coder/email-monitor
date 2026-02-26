@@ -11,7 +11,7 @@
         </div>
         <div class="header-buttons">
             {% if not user.access_token %}
-            <a href="{{ url_for('connect_gmail') }}" class="btn btn-success btn-lg">
+            <a href="{{ url_for('gmail_setup') }}" class="btn btn-success btn-lg">
                 📧 Connect Gmail Account
             </a>
             {% else %}
@@ -182,7 +182,7 @@ function syncEmails() {
                 messageSpan.style.color = '#28a745';
                 setTimeout(() => location.reload(), 2000);
             } else if (status === 400) {
-                messageSpan.innerHTML = `⚠️ ${data.message || data.error}<br><a href="{{ url_for('connect_gmail') }}" style="color: #3366cc; text-decoration: underline;">Click here to connect Gmail</a>`;
+                messageSpan.innerHTML = `⚠️ ${data.message || data.error}<br><a href="{{ url_for('gmail_setup') }}" style="color: #3366cc; text-decoration: underline;">Click here to connect Gmail</a>`;
                 messageSpan.style.color = '#ff9800';
             } else {
                 messageSpan.textContent = `❌ Error: ${data.error || 'Unknown error'}`;

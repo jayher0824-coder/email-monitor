@@ -15,7 +15,7 @@ class Config:
     # Get these from Google Cloud Console
     GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
     GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
-    GOOGLE_REDIRECT_URI = 'http://localhost:8000/callback'
+    GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'http://localhost:8000/callback')
     
     SCOPES = [
         'https://www.googleapis.com/auth/gmail.readonly',

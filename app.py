@@ -355,6 +355,9 @@ def dashboard():
     """Main dashboard with analytics"""
     try:
         user = get_current_user()
+        if not user:
+            return redirect(url_for('login'))
+        
         user_id = user.id
         
         # Get document statistics
