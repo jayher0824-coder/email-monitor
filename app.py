@@ -224,6 +224,16 @@ def logout():
     return redirect(url_for('login'))
 
 
+@app.route('/privacy')
+def privacy():
+    """Privacy policy page"""
+    return render_template('privacy.html', now=datetime.now())
+
+
+@app.route('/terms')
+def terms():
+    """Terms of service page"""
+    return render_template('terms.html', now=datetime.now())
 
 
 @app.route('/verify-2fa', methods=['GET', 'POST'])
