@@ -454,6 +454,51 @@ def documents():
                          current_priority=priority)
 
 
+@app.route('/archive')
+@login_required
+def view_archive():
+    """View archived documents"""
+    user = get_current_user()
+    user_id = user.id
+    
+    # Get query parameters
+    search = request.args.get('search', '').strip()
+    direction = request.args.get('direction', '')
+    priority = request.args.get('priority', '')
+    
+    # Build query - only archived documents
+    query = Document.query.filter_by(user_id=user_id, is_archived=True)
+    
+    if search:
+        query = query.filter(
+            (Document.title.ilike(f'%{search}%')) |
+            (Document.description.ilike(f'%{search}%')) |
+            (Document.sender.ilike(f'%{search}%')) |
+            (Document.recipient.ilike(f'%{search}%'))
+        )
+    
+    if direction:
+        query = query.filter_by(direction=direction)
+    
+    if priority:
+        query = query.filter_by(priority=priority)
+    
+    # Apply pagination
+    page = request.args.get('page', 1, type=int)
+    documents = query.order_by(Document.updated_at.desc()).paginate(page=page, per_page=20)
+    
+    # Get user tags
+    tags = Tag.query.filter_by(user_id=user_id).all()
+    
+    return render_template('documents.html',
+                         documents=documents,
+                         tags=tags,
+                         is_archive=True,
+                         current_search=search,
+                         current_direction=direction,
+                         current_priority=priority)
+
+
 @app.route('/document/<int:doc_id>')
 @login_required
 def view_document(doc_id):
