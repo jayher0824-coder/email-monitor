@@ -38,12 +38,12 @@ db.init_app(app)
 csrf = CSRFProtect(app)
 CORS(app, origins=Config.CORS_ORIGINS)
 
-# Rate limiting
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"]
-)
+# Rate limiting disabled
+# limiter = Limiter(
+#     app=app,
+#     key_func=get_remote_address,
+#     default_limits=["200 per day", "50 per hour"]
+# )
 
 # Create uploads directory
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
@@ -173,7 +173,6 @@ def register():
 
 
 @app.route('/login', methods=['GET', 'POST'])
-@limiter.limit("5 per minute")
 def login():
     """User login with security checks"""
     if 'user_id' in session:
@@ -255,7 +254,6 @@ def setup_2fa():
 
 
 @app.route('/verify-2fa', methods=['GET', 'POST'])
-@limiter.limit("10 per minute")
 def verify_2fa():
     """Verify 2FA token"""
     user_id = session.get('pre_2fa_user_id') or session.get('user_id')
@@ -1636,7 +1634,6 @@ def gmail_configure():
 @app.route('/gmail/sync-config', methods=['POST'])
 @login_required
 @require_2fa
-@limiter.limit("5 per hour")
 def gmail_sync_config():
     """Update Gmail sync configuration"""
     user = get_current_user()
@@ -1690,7 +1687,6 @@ def gmail_sync_config():
 
 @app.route('/gmail/sync', methods=['POST'])
 @login_required
-@limiter.limit("10 per hour")
 def gmail_sync():
     """Manually sync emails from Gmail"""
     from gmail_service import GmailService
