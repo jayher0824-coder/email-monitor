@@ -231,14 +231,14 @@ def logout():
 
 @app.route('/privacy')
 def privacy():
-    """Privacy policy page"""
-    return render_template('privacy.html', now=datetime.now())
+    """Privacy policy page - public"""
+    return render_template('privacy_public.html', now=datetime.now())
 
 
 @app.route('/terms')
 def terms():
-    """Terms of service page"""
-    return render_template('terms.html', now=datetime.now())
+    """Terms of service page - public"""
+    return render_template('terms_public.html', now=datetime.now())
 
 
 @app.route('/verify-2fa', methods=['GET', 'POST'])
@@ -329,10 +329,11 @@ def change_password():
 
 @app.route('/')
 def index():
-    """Root route"""
+    """Root route - public homepage"""
     if 'user_id' in session:
         return redirect(url_for('dashboard'))
-    return redirect(url_for('login'))
+    # Show public homepage instead of redirecting to login
+    return render_template('home.html')
 
 
 @app.route('/dashboard')
