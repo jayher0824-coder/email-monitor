@@ -15,7 +15,18 @@ class Config:
     # Get these from Google Cloud Console
     GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
     GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
-    GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'http://localhost:8000/callback')
+    
+    # Determine redirect URI based on environment
+    # Priority: Explicit GOOGLE_REDIRECT_URI > Auto-detect from Render > Default localhost
+    if os.environ.get('GOOGLE_REDIRECT_URI'):
+        # Explicit redirect URI provided
+        GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI')
+    elif os.environ.get('RENDER_EXTERNAL_URL'):
+        # Running on Render.com - use the external URL
+        GOOGLE_REDIRECT_URI = os.environ.get('RENDER_EXTERNAL_URL').rstrip('/') + '/gmail/callback'
+    else:
+        # Default to localhost for development
+        GOOGLE_REDIRECT_URI = 'http://localhost:5000/callback'
     
     SCOPES = [
         'https://www.googleapis.com/auth/gmail.readonly',
@@ -26,7 +37,8 @@ class Config:
     
     # Session Security
     PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
-    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'false').lower() == 'true'  # Only send over HTTPS
+    # Only require secure cookies in production (HTTPS)
+    SESSION_COOKIE_SECURE = os.environ.get('FLASK_ENV') == 'production'
     SESSION_COOKIE_HTTPONLY = True  # Not accessible to JavaScript
     SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
     SESSION_REFRESH_EACH_REQUEST = True

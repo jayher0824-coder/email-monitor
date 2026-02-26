@@ -36,6 +36,11 @@ db.init_app(app)
 csrf = CSRFProtect(app)
 CORS(app, origins=Config.CORS_ORIGINS)
 
+# Trust proxy headers from Render
+# This is needed to properly detect HTTPS when behind a reverse proxy
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+
 # Rate limiting disabled - dummy limiter that does nothing
 class DummyLimiter:
     def limit(self, *args, **kwargs):
