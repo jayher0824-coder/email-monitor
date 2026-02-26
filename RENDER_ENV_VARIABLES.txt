@@ -1,0 +1,168 @@
+================================================================================
+        EMAIL MONITOR - ENVIRONMENT VARIABLES FOR RENDER DEPLOYMENT
+================================================================================
+
+Add these environment variables in your Render dashboard:
+Settings → Environment Variables → Add Variable
+
+================================================================================
+REQUIRED VARIABLES (Must Configure)
+================================================================================
+
+1. SECRET_KEY
+   Description: Flask secret key for session management
+   Value: Generate a strong random string (at least 32 characters)
+   Example: your-secret-key-should-be-very-long-and-random-string-here
+   Command to generate: python -c "import secrets; print(secrets.token_urlsafe(32))"
+
+2. JWT_SECRET
+   Description: Secret key for JWT token generation
+   Value: Generate a strong random string (at least 32 characters)
+   Example: jwt-secret-should-also-be-very-long-random-string-here
+   Command to generate: python -c "import secrets; print(secrets.token_urlsafe(32))"
+
+3. SQLALCHEMY_DATABASE_URI
+   Description: Database connection URL
+   Value: Your PostgreSQL database URL from Render
+   Example: postgresql://user:password@hostname:5432/dbname
+   Note: Get this from Render database connection string
+
+4. GOOGLE_CLIENT_ID
+   Description: Google OAuth2 Client ID for Gmail integration
+   Value: From Google Cloud Console
+   Example: 123456789-abc123xyz789.apps.googleusercontent.com
+   Steps: 
+     - Go to Google Cloud Console
+     - Create OAuth 2.0 credentials (Web application)
+     - Copy Client ID
+
+5. GOOGLE_CLIENT_SECRET
+   Description: Google OAuth2 Client Secret for Gmail integration
+   Value: From Google Cloud Console
+   Example: GOCSPX-xxxxxxxxxxxxxxxxxxxxx
+   Steps:
+     - Go to Google Cloud Console
+     - Copy Client Secret
+
+6. GOOGLE_REDIRECT_URI
+   Description: OAuth2 redirect URL after Gmail authentication
+   Value: Your Render app URL with callback
+   Example: https://your-app-name.onrender.com/gmail/callback
+   Note: Update this after you get your Render URL
+
+================================================================================
+OPTIONAL BUT RECOMMENDED VARIABLES
+================================================================================
+
+7. MAIL_SERVER
+   Description: SMTP server for sending email notifications
+   Default: smtp.gmail.com
+   Value: smtp.gmail.com (or your email provider's SMTP server)
+
+8. MAIL_PORT
+   Description: SMTP port for email notifications
+   Default: 587
+   Value: 587 (TLS) or 465 (SSL)
+
+9. MAIL_USERNAME
+   Description: Email address for sending notifications
+   Value: your-email@gmail.com
+   Note: Use app-specific password if using Gmail
+
+10. MAIL_PASSWORD
+    Description: Password for email notifications
+    Value: your-app-specific-password
+    Note: Use app-specific password if using Gmail (not your account password)
+
+11. MAIL_USE_TLS
+    Description: Use TLS for email connection
+    Default: True
+    Value: True or False
+
+12. CORS_ORIGINS
+    Description: Allowed origins for CORS (Cross-Origin requests)
+    Default: http://localhost:5000,http://localhost:3000
+    Value: https://your-app-name.onrender.com
+    Example: https://example.com,https://app.example.com
+
+================================================================================
+AUTO-CONFIGURED BY RENDER (No Action Needed)
+================================================================================
+
+These are typically handled by Render automatically:
+- PORT: Automatically assigned by Render
+- FLASK_ENV: Set to 'production' automatically
+
+================================================================================
+SECURITY RECOMMENDATIONS
+================================================================================
+
+✓ Generate strong SECRET_KEY and JWT_SECRET using Python
+✓ Never commit credentials to Git - always use Render environment variables
+✓ Rotate keys periodically in production
+✓ Use app-specific passwords for email (not account passwords)
+✓ Keep Google OAuth credentials secure
+✓ Monitor environment variable changes
+
+================================================================================
+STEPS TO ADD VARIABLES TO RENDER
+================================================================================
+
+1. Go to your Render Dashboard
+2. Select your service
+3. Click "Settings" (or "Environment")
+4. Scroll to "Environment Variables"
+5. Click "Add Variable"
+6. Enter the Key and Value pairs
+7. Click "Save changes"
+8. Your app will auto-deploy with new variables
+
+================================================================================
+EXAMPLE CONFIGURATION
+================================================================================
+
+SECRET_KEY=aB7Xq9mK2pL8vN3dF6hJ1qW0eR5tY4u7i9oP2aS3dF
+JWT_SECRET=pK9xM2lQ0wE8rT5yU3iO1aS4dF6gH7jK8lZ9xC2vB
+SQLALCHEMY_DATABASE_URI=postgresql://user123:pass456@db.onrender.com:5432/emailmonitor
+GOOGLE_CLIENT_ID=123456789-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-AbCdEfGhIjKl
+GOOGLE_REDIRECT_URI=https://emailmonitor.onrender.com/gmail/callback
+MAIL_SERVER=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=noreply@example.com
+MAIL_PASSWORD=app-specific-password-here
+MAIL_USE_TLS=True
+CORS_ORIGINS=https://emailmonitor.onrender.com
+
+================================================================================
+COMMON ISSUES & SOLUTIONS
+================================================================================
+
+Issue: "Missing required environment variable"
+Solution: Check that all REQUIRED variables are set in Render dashboard
+
+Issue: Gmail integration not working
+Solution: Verify GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI are correct
+
+Issue: Database connection failed
+Solution: Verify SQLALCHEMY_DATABASE_URI is correct and database is accessible
+
+Issue: Email notifications not sending
+Solution: Verify MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, and MAIL_PASSWORD
+
+Issue: CSRF or session errors
+Solution: Verify SECRET_KEY is set and not the default value
+
+================================================================================
+AFTER DEPLOYMENT CHECKLIST
+================================================================================
+
+☐ Test login functionality
+☐ Test Gmail integration
+☐ Verify email notifications (if configured)
+☐ Check file uploads work
+☐ Verify 2FA setup
+☐ Monitor logs for errors
+☐ Test from different devices/locations
+
+================================================================================

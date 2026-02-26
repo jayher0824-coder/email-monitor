@@ -1787,6 +1787,171 @@ def api_daily_stats():
 
 
 # ==================== ERROR HANDLERS ====================
+# ==================== ADMIN DASHBOARD ====================
+
+@app.route('/admin/dashboard')
+@login_required
+@admin_required
+def admin_dashboard():
+    """Admin dashboard - manage users and system"""
+    # Get user statistics
+    total_users = User.query.count()
+    active_users = User.query.filter_by(is_active=True).count()
+    inactive_users = User.query.filter_by(is_active=False).count()
+    two_fa_enabled = User.query.filter_by(two_factor_enabled=True).count()
+    
+    # Get all users
+    users = User.query.order_by(User.created_at.desc()).all()
+    
+    return render_template('admin_dashboard.html',
+                         users=users,
+                         total_users=total_users,
+                         active_users=active_users,
+                         inactive_users=inactive_users,
+                         two_fa_enabled=two_fa_enabled)
+
+
+@app.route('/admin/user/<int:user_id>/password', methods=['POST'])
+@login_required
+@admin_required
+def reset_user_password(user_id):
+    """Reset user password"""
+    user = User.query.get(user_id)
+    
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    
+    try:
+        data = request.get_json()
+        new_password = data.get('password', '').strip()
+        
+        if not new_password:
+            return jsonify({'success': False, 'error': 'Password is required'}), 400
+        
+        # Validate password strength
+        from security import PasswordValidator
+        validator = PasswordValidator()
+        
+        if not validator.is_strong(new_password):
+            return jsonify({'success': False, 
+                          'error': 'Password must be 12+ chars with uppercase, lowercase, numbers, and special chars'}), 400
+        
+        # Update password
+        from werkzeug.security import generate_password_hash
+        user.password_hash = generate_password_hash(new_password)
+        user.last_password_change = datetime.utcnow()
+        
+        db.session.commit()
+        
+        # Log action
+        admin_user = get_current_user()
+        AuditService.log_action(
+            user_id=admin_user.id,
+            action='password_reset',
+            resource_type='user',
+            resource_id=user_id,
+            changes=f"Password reset by {admin_user.full_name}"
+        )
+        
+        return jsonify({'success': True, 'message': 'Password reset successfully'})
+    
+    except Exception as e:
+        print(f"[ERROR] Password reset failed: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/admin/user/<int:user_id>/role', methods=['POST'])
+@login_required
+@admin_required
+def change_user_role(user_id):
+    """Change user role"""
+    user = User.query.get(user_id)
+    
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    
+    try:
+        data = request.get_json()
+        new_role = data.get('role', '').strip()
+        
+        if new_role not in ['admin', 'user', 'viewer']:
+            return jsonify({'success': False, 'error': 'Invalid role'}), 400
+        
+        old_role = user.role
+        user.role = new_role
+        
+        db.session.commit()
+        
+        # Log action
+        admin_user = get_current_user()
+        AuditService.log_action(
+            user_id=admin_user.id,
+            action='role_changed',
+            resource_type='user',
+            resource_id=user_id,
+            changes=f"Role changed from {old_role} to {new_role} by {admin_user.full_name}"
+        )
+        
+        return jsonify({'success': True, 'message': f'User role changed to {new_role}'})
+    
+    except Exception as e:
+        print(f"[ERROR] Role change failed: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/admin/user/<int:user_id>/status', methods=['POST'])
+@login_required
+@admin_required
+def change_user_status(user_id):
+    """Activate or deactivate user"""
+    user = User.query.get(user_id)
+    
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    
+    try:
+        data = request.get_json()
+        is_active = data.get('is_active', True)
+        
+        old_status = user.is_active
+        user.is_active = is_active
+        
+        db.session.commit()
+        
+        # Log action
+        admin_user = get_current_user()
+        status_text = 'activated' if is_active else 'deactivated'
+        
+        AuditService.log_action(
+            user_id=admin_user.id,
+            action='user_status_changed',
+            resource_type='user',
+            resource_id=user_id,
+            changes=f"User {status_text} by {admin_user.full_name}"
+        )
+        
+        # Notify user
+        if is_active:
+            NotificationService.create_notification(
+                user_id,
+                'Account Activated',
+                'Your account has been activated by an administrator. You can now log in.',
+                'success'
+            )
+        else:
+            NotificationService.create_notification(
+                user_id,
+                'Account Deactivated',
+                'Your account has been deactivated. Please contact an administrator for assistance.',
+                'error'
+            )
+        
+        return jsonify({'success': True, 'message': f'User {status_text} successfully'})
+    
+    except Exception as e:
+        print(f"[ERROR] Status change failed: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 @app.errorhandler(404)
 def not_found(e):

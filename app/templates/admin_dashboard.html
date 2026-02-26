@@ -1,0 +1,793 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Email Monitor{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <div class="admin-header">
+        <h2>👨‍💼 Admin Dashboard</h2>
+        <p class="subtitle">Manage users, accounts, and system settings</p>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="admin-stats">
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-content">
+                <h3>Total Users</h3>
+                <p class="stat-number">{{ total_users }}</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-content">
+                <h3>Active Users</h3>
+                <p class="stat-number">{{ active_users }}</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🚫</div>
+            <div class="stat-content">
+                <h3>Inactive Users</h3>
+                <p class="stat-number">{{ inactive_users }}</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🔐</div>
+            <div class="stat-content">
+                <h3>2FA Enabled</h3>
+                <p class="stat-number">{{ two_fa_enabled }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Management -->
+    <div class="admin-section">
+        <h3>📋 User Management</h3>
+        
+        <!-- Search and Filter -->
+        <div class="admin-controls">
+            <div class="search-box">
+                <input type="text" id="userSearch" placeholder="Search by email or name..." class="search-input">
+            </div>
+            <div class="filter-options">
+                <select id="statusFilter" class="filter-select">
+                    <option value="all">All Users</option>
+                    <option value="active">Active Only</option>
+                    <option value="inactive">Inactive Only</option>
+                </select>
+                <select id="roleFilter" class="filter-select">
+                    <option value="all">All Roles</option>
+                    <option value="admin">Admins</option>
+                    <option value="user">Users</option>
+                    <option value="viewer">Viewers</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Email</th>
+                        <th>Full Name</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>2FA</th>
+                        <th>Created</th>
+                        <th>Last Login</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="userTableBody">
+                    {% for user in users %}
+                    <tr class="user-row" data-email="{{ user.email }}" data-role="{{ user.role }}" data-active="{{ 'active' if user.is_active else 'inactive' }}">
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <a href="{{ url_for('admin_user_detail', user_id=user.id) }}" class="user-email">
+                                {{ user.email }}
+                            </a>
+                        </td>
+                        <td>{{ user.full_name or '-' }}</td>
+                        <td>
+                            <span class="badge badge-{{ user.role }}">{{ user.role.upper() }}</span>
+                        </td>
+                        <td>
+                            <span class="status-badge {% if user.is_active %}status-active{% else %}status-inactive{% endif %}">
+                                {% if user.is_active %}✓ Active{% else %}✗ Inactive{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            {% if user.two_factor_enabled %}
+                                <span class="badge badge-success">✓ Enabled</span>
+                            {% else %}
+                                <span class="badge badge-secondary">Disabled</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            {% if user.last_login %}
+                                {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                            {% else %}
+                                <em>Never</em>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="{{ url_for('admin_user_detail', user_id=user.id) }}" class="btn-small btn-info" title="View Details">👁️</a>
+                                
+                                <!-- Activate/Deactivate -->
+                                {% if user.is_active %}
+                                    <button class="btn-small btn-warning" onclick="deactivateUser({{ user.id }}, '{{ user.email }}')" title="Deactivate User">🚫</button>
+                                {% else %}
+                                    <button class="btn-small btn-success" onclick="activateUser({{ user.id }}, '{{ user.email }}')" title="Activate User">✅</button>
+                                {% endif %}
+                                
+                                <!-- Change Password -->
+                                <button class="btn-small btn-primary" onclick="resetPassword({{ user.id }}, '{{ user.email }}')" title="Reset Password">🔑</button>
+                                
+                                <!-- Change Role -->
+                                <button class="btn-small btn-secondary" onclick="changeRole({{ user.id }}, '{{ user.email }}')" title="Change Role">👤</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center">No users found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal: Reset Password -->
+    <div id="resetPasswordModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('resetPasswordModal')">&times;</span>
+            <h3>🔑 Reset Password</h3>
+            <p>Set a new password for <strong id="resetUserEmail"></strong></p>
+            
+            <form id="resetPasswordForm" onsubmit="handleResetPassword(event)">
+                <div class="form-group">
+                    <label for="newPassword">New Password:</label>
+                    <input type="password" id="newPassword" name="password" class="form-control" 
+                           placeholder="Enter new password (min 12 chars)" required 
+                           minlength="12">
+                    <small>Must contain: uppercase, lowercase, numbers, special characters</small>
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password:</label>
+                    <input type="password" id="confirmPassword" name="confirm_password" class="form-control" 
+                           placeholder="Confirm password" required>
+                </div>
+                <input type="hidden" id="resetUserId" name="user_id">
+                <div class="form-buttons">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('resetPasswordModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Reset Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Change Role -->
+    <div id="changeRoleModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('changeRoleModal')">&times;</span>
+            <h3>👤 Change User Role</h3>
+            <p>Update role for <strong id="roleUserEmail"></strong></p>
+            
+            <form id="changeRoleForm" onsubmit="handleChangeRole(event)">
+                <div class="form-group">
+                    <label for="newRole">Select Role:</label>
+                    <select id="newRole" name="role" class="form-control" required>
+                        <option value="">-- Choose Role --</option>
+                        <option value="admin">Admin (Full Access)</option>
+                        <option value="user">User (Standard Access)</option>
+                        <option value="viewer">Viewer (Read-Only)</option>
+                    </select>
+                </div>
+                <input type="hidden" id="roleUserId" name="user_id">
+                <div class="form-buttons">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('changeRoleModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Role</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Confirmation -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content modal-confirm">
+            <h3 id="confirmTitle">Confirm Action</h3>
+            <p id="confirmMessage"></p>
+            <div class="form-buttons">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('confirmModal')">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmButton" onclick="">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.admin-dashboard {
+    padding: 20px;
+}
+
+.admin-header {
+    margin-bottom: 30px;
+}
+
+.admin-header h2 {
+    margin: 0 0 10px 0;
+    font-size: 2em;
+}
+
+.subtitle {
+    color: #666;
+    margin: 0;
+}
+
+/* Stats Overview */
+.admin-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    display: flex;
+    align-items: center;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.stat-icon {
+    font-size: 2.5em;
+    margin-right: 15px;
+}
+
+.stat-content h3 {
+    margin: 0;
+    font-size: 0.9em;
+    color: #888;
+}
+
+.stat-number {
+    margin: 5px 0 0 0;
+    font-size: 1.8em;
+    font-weight: bold;
+    color: #333;
+}
+
+/* Section */
+.admin-section {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.admin-section h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+}
+
+/* Controls */
+.admin-controls {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.search-box {
+    flex: 1;
+    min-width: 250px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.95em;
+}
+
+.filter-options {
+    display: flex;
+    gap: 10px;
+}
+
+.filter-select {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+}
+
+/* Table */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95em;
+}
+
+.admin-table thead {
+    background: #f5f5f5;
+    border-bottom: 2px solid #ddd;
+}
+
+.admin-table th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #333;
+}
+
+.admin-table td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    vertical-align: middle;
+}
+
+.admin-table tbody tr:hover {
+    background: #f9f9f9;
+}
+
+.user-email {
+    color: #0066cc;
+    text-decoration: none;
+}
+
+.user-email:hover {
+    text-decoration: underline;
+}
+
+/* Badges */
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.badge-admin {
+    background: #ffe6e6;
+    color: #cc0000;
+}
+
+.badge-user {
+    background: #e6f0ff;
+    color: #0051cc;
+}
+
+.badge-viewer {
+    background: #f0f0f0;
+    color: #666;
+}
+
+.badge-success {
+    background: #e6ffe6;
+    color: #009900;
+}
+
+.badge-secondary {
+    background: #f0f0f0;
+    color: #666;
+}
+
+/* Status Badge */
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.status-active {
+    background: #e6ffe6;
+    color: #009900;
+}
+
+.status-inactive {
+    background: #ffe6e6;
+    color: #cc0000;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.btn-small {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-info {
+    background: #e6f0ff;
+    color: #0051cc;
+}
+
+.btn-success {
+    background: #e6ffe6;
+    color: #009900;
+}
+
+.btn-warning {
+    background: #fff4e6;
+    color: #ff9900;
+}
+
+.btn-primary {
+    background: #0066cc;
+    color: white;
+}
+
+.btn-secondary {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.btn-small:hover {
+    opacity: 0.8;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+}
+
+.modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+}
+
+.close {
+    position: absolute;
+    right: 20px;
+    top: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #aaa;
+}
+
+.close:hover {
+    color: #000;
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.95em;
+    box-sizing: border-box;
+}
+
+.form-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: flex-end;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-primary {
+    background: #0066cc;
+    color: white;
+}
+
+.btn-secondary {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.btn-danger {
+    background: #cc0000;
+    color: white;
+}
+
+.btn:hover {
+    opacity: 0.9;
+}
+
+.modal-confirm {
+    text-align: center;
+}
+
+small {
+    display: block;
+    margin-top: 5px;
+    color: #999;
+}
+
+@media (max-width: 768px) {
+    .admin-controls {
+        flex-direction: column;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .admin-table {
+        font-size: 0.85em;
+    }
+    
+    .admin-table th,
+    .admin-table td {
+        padding: 8px;
+    }
+}
+</style>
+
+<script>
+let currentActionUserId = null;
+
+// Search functionality
+document.getElementById('userSearch').addEventListener('keyup', function() {
+    filterTable();
+});
+
+document.getElementById('statusFilter').addEventListener('change', function() {
+    filterTable();
+});
+
+document.getElementById('roleFilter').addEventListener('change', function() {
+    filterTable();
+});
+
+function filterTable() {
+    const searchTerm = document.getElementById('userSearch').value.toLowerCase();
+    const statusFilter = document.getElementById('statusFilter').value;
+    const roleFilter = document.getElementById('roleFilter').value;
+    
+    const rows = document.querySelectorAll('.user-row');
+    
+    rows.forEach(row => {
+        const email = row.getAttribute('data-email').toLowerCase();
+        const role = row.getAttribute('data-role');
+        const active = row.getAttribute('data-active');
+        
+        let matches = true;
+        
+        if (searchTerm && !email.includes(searchTerm)) {
+            matches = false;
+        }
+        
+        if (statusFilter !== 'all' && statusFilter !== active) {
+            matches = false;
+        }
+        
+        if (roleFilter !== 'all' && roleFilter !== role) {
+            matches = false;
+        }
+        
+        row.style.display = matches ? '' : 'none';
+    });
+}
+
+// Modal functions
+function openModal(modalId) {
+    document.getElementById(modalId).classList.add('show');
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('show');
+}
+
+// Reset Password
+function resetPassword(userId, email) {
+    document.getElementById('resetUserId').value = userId;
+    document.getElementById('resetUserEmail').textContent = email;
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
+    openModal('resetPasswordModal');
+}
+
+function handleResetPassword(event) {
+    event.preventDefault();
+    
+    const password = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    const userId = document.getElementById('resetUserId').value;
+    
+    if (password !== confirmPassword) {
+        alert('Passwords do not match!');
+        return;
+    }
+    
+    // Send request to backend
+    fetch('/admin/user/' + userId + '/password', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({ password: password })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('✓ Password reset successfully!');
+            closeModal('resetPasswordModal');
+            location.reload();
+        } else {
+            alert('✗ Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('✗ Error: ' + error);
+    });
+}
+
+// Change Role
+function changeRole(userId, email) {
+    document.getElementById('roleUserId').value = userId;
+    document.getElementById('roleUserEmail').textContent = email;
+    document.getElementById('newRole').value = '';
+    openModal('changeRoleModal');
+}
+
+function handleChangeRole(event) {
+    event.preventDefault();
+    
+    const role = document.getElementById('newRole').value;
+    const userId = document.getElementById('roleUserId').value;
+    
+    if (!role) {
+        alert('Please select a role');
+        return;
+    }
+    
+    fetch('/admin/user/' + userId + '/role', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({ role: role })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('✓ Role updated successfully!');
+            closeModal('changeRoleModal');
+            location.reload();
+        } else {
+            alert('✗ Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('✗ Error: ' + error);
+    });
+}
+
+// Activate User
+function activateUser(userId, email) {
+    const confirmTitle = document.getElementById('confirmTitle');
+    const confirmMessage = document.getElementById('confirmMessage');
+    const confirmButton = document.getElementById('confirmButton');
+    
+    confirmTitle.textContent = '✅ Activate User';
+    confirmMessage.textContent = 'Are you sure you want to activate ' + email + '?';
+    confirmButton.textContent = 'Activate';
+    confirmButton.onclick = function() {
+        updateUserStatus(userId, true);
+    };
+    
+    openModal('confirmModal');
+}
+
+// Deactivate User
+function deactivateUser(userId, email) {
+    const confirmTitle = document.getElementById('confirmTitle');
+    const confirmMessage = document.getElementById('confirmMessage');
+    const confirmButton = document.getElementById('confirmButton');
+    
+    confirmTitle.textContent = '🚫 Deactivate User';
+    confirmMessage.textContent = 'Are you sure you want to deactivate ' + email + '?';
+    confirmButton.textContent = 'Deactivate';
+    confirmButton.classList.add('btn-danger');
+    confirmButton.onclick = function() {
+        updateUserStatus(userId, false);
+    };
+    
+    openModal('confirmModal');
+}
+
+function updateUserStatus(userId, isActive) {
+    fetch('/admin/user/' + userId + '/status', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({ is_active: isActive })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('✓ User status updated successfully!');
+            location.reload();
+        } else {
+            alert('✗ Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('✗ Error: ' + error);
+    });
+}
+
+// Close modals when clicking outside
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+        event.target.classList.remove('show');
+    }
+}
+</script>
+{% endblock %}

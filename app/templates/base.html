@@ -19,7 +19,7 @@
                 <li><a href="{{ url_for('dashboard') }}" {% if request.endpoint == 'dashboard' %}class="active"{% endif %}>Dashboard</a></li>
                 <li><a href="{{ url_for('view_archive') }}" {% if request.endpoint == 'view_archive' %}class="active"{% endif %}>Archive</a></li>
                 {% if session.get('is_admin') %}
-                    <li><a href="{{ url_for('admin_users') }}" class="admin-link" {% if request.endpoint == 'admin_users' or request.endpoint == 'view_user_details' %}class="active admin-link"{% endif %}>👥 Admin Portal</a></li>
+                    <li><a href="{{ url_for('admin_dashboard') }}" class="admin-link" {% if request.endpoint == 'admin_dashboard' or request.endpoint == 'admin_users' %}class="active admin-link"{% endif %}>👨‍💼 Admin</a></li>
                 {% endif %}
                 <li><span class="navbar-email">{{ session.get('email') }}</span></li>
                 <li><a href="{{ url_for('logout') }}" class="btn-logout">Logout</a></li>
