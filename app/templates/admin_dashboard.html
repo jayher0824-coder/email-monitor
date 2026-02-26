@@ -86,7 +86,7 @@
                     <tr class="user-row" data-email="{{ user.email }}" data-role="{{ user.role }}" data-active="{{ 'active' if user.is_active else 'inactive' }}">
                         <td>{{ loop.index }}</td>
                         <td>
-                            <a href="{{ url_for('admin_user_detail', user_id=user.id) }}" class="user-email">
+                            <a href="{{ url_for('view_user_details', user_id=user.id) }}" class="user-email">
                                 {{ user.email }}
                             </a>
                         </td>
@@ -116,7 +116,7 @@
                         </td>
                         <td>
                             <div class="action-buttons">
-                                <a href="{{ url_for('admin_user_detail', user_id=user.id) }}" class="btn-small btn-info" title="View Details">👁️</a>
+                                <a href="{{ url_for('view_user_details', user_id=user.id) }}" class="btn-small btn-info" title="View Details">👁️</a>
                                 
                                 <!-- Activate/Deactivate -->
                                 {% if user.is_active %}
