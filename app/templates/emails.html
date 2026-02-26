@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Email Logs - Email Monitor{% endblock %}
+
+{% block content %}
+<div class="emails-page">
+    <div class="page-header">
+        <h2>Email Logs</h2>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+    
+    <div class="filters-section">
+        <form method="get" class="filters-form">
+            <div class="filter-group">
+                <label>Direction:</label>
+                <select name="direction" onchange="this.form.submit()">
+                    <option value="all" {% if direction_filter == 'all' %}selected{% endif %}>All Emails</option>
+                    <option value="in" {% if direction_filter == 'in' %}selected{% endif %}>Incoming Only</option>
+                    <option value="out" {% if direction_filter == 'out' %}selected{% endif %}>Outgoing Only</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Category:</label>
+                <select name="category" onchange="this.form.submit()">
+                    <option value="all" {% if category_filter == 'all' %}selected{% endif %}>All Categories</option>
+                    <option value="work" {% if category_filter == 'work' %}selected{% endif %}>Work</option>
+                    <option value="general" {% if category_filter == 'general' %}selected{% endif %}>General</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <input type="text" name="search" placeholder="Search by sender, subject, or recipient..." value="{{ search }}">
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
+    </div>
+    
+    <div class="results-info">
+        <p>Total: <strong>{{ total }}</strong> emails | Page <strong>{{ current_page }}</strong> of <strong>{{ pages }}</strong></p>
+    </div>
+    
+    {% if emails %}
+    <div class="emails-table-container">
+        <table class="emails-table">
+            <thead>
+                <tr>
+                    <th>Direction</th>
+                    <th>From/To</th>
+                    <th>Subject</th>
+                    <th>Category</th>
+                    <th>Date</th>
+                    <th>Attachment</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for email in emails %}
+                <tr class="email-row {% if email.direction == 'in' %}row-incoming{% else %}row-outgoing{% endif %}">
+                    <td class="cell-direction">
+                        {% if email.direction == 'in' %}
+                        <span class="badge badge-in">📥 Incoming</span>
+                        {% else %}
+                        <span class="badge badge-out">📤 Outgoing</span>
+                        {% endif %}
+                    </td>
+                    <td class="cell-from-to">
+                        {% if email.direction == 'in' %}
+                        <strong>From:</strong> {{ email.sender[:50] or 'Unknown' }}
+                        {% else %}
+                        <strong>To:</strong> {{ email.recipient[:50] or 'Unknown' }}
+                        {% endif %}
+                    </td>
+                    <td class="cell-subject">
+                        <div class="subject-text">{{ email.subject[:60] or '(No Subject)' }}</div>
+                        <div class="snippet-text">{{ email.snippet[:80] }}</div>
+                    </td>
+                    <td class="cell-category">
+                        <span class="badge badge-category">{{ email.category or 'General' }}</span>
+                    </td>
+                    <td class="cell-date">{{ email.received_at.strftime('%b %d, %Y') if email.received_at else 'N/A' }}</td>
+                    <td class="cell-attachment">
+                        {% if email.has_attachment %}
+                        <span class="badge badge-attachment">📎 Yes</span>
+                        {% else %}
+                        <span class="badge badge-no">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="cell-status">
+                        {% if not email.is_read %}
+                        <span class="badge badge-unread">Unread</span>
+                        {% else %}
+                        <span class="badge badge-read">Read</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if pages > 1 %}
+    <div class="pagination">
+        {% if current_page > 1 %}
+        <a href="{{ url_for('emails', page=1, direction=direction_filter, category=category_filter, search=search) }}" class="btn btn-secondary">First</a>
+        <a href="{{ url_for('emails', page=current_page-1, direction=direction_filter, category=category_filter, search=search) }}" class="btn btn-secondary">← Previous</a>
+        {% endif %}
+        
+        <span class="page-info">Page {{ current_page }} of {{ pages }}</span>
+        
+        {% if current_page < pages %}
+        <a href="{{ url_for('emails', page=current_page+1, direction=direction_filter, category=category_filter, search=search) }}" class="btn btn-secondary">Next →</a>
+        <a href="{{ url_for('emails', page=pages, direction=direction_filter, category=category_filter, search=search) }}" class="btn btn-secondary">Last</a>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <div class="empty-state">
+        <h3>No emails found</h3>
+        <p>Try adjusting your filters or search terms</p>
+        <a href="{{ url_for('emails', direction='all', search='') }}" class="btn btn-primary">Reset Filters</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

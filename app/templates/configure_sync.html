@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}Configure Email Sync - Document Management{% endblock %}
+
+{% block content %}
+<div class="configure-container">
+    <div class="config-card">
+        <div class="config-header">
+            <h1>[SETTINGS] Email Sync Configuration</h1>
+            <p>Set up filters to sync only the emails you need</p>
+        </div>
+
+        <form method="POST" class="filter-form">
+            <!-- Basic Settings -->
+            <div class="form-section">
+                <h3>[BASIC] Basic Settings</h3>
+                
+                <div class="form-group">
+                    <label>Days Back (sync last N days):</label>
+                    <input type="number" name="days_back" value="{{ filter.days_back or 7 }}" min="1" max="90" required>
+                    <small>How far back to fetch emails (1-90 days)</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Max Results (per sync):</label>
+                    <input type="number" name="max_results" value="{{ filter.max_results or 20 }}" min="1" max="100" required>
+                    <small>Maximum emails to fetch in one sync (1-100)</small>
+                </div>
+            </div>
+
+            <!-- Sender Filters -->
+            <div class="form-section">
+                <h3>[FILTER] Sender Filters</h3>
+                
+                <div class="form-group">
+                    <label>Include Only From (whitelist):</label>
+                    <textarea name="sender_include" placeholder="example@gmail.com, boss@company.com" rows="3">{{ filter.sender_include or '' }}</textarea>
+                    <small>Leave empty to sync from all senders. Comma-separated email addresses or domains.</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Exclude From (blacklist):</label>
+                    <textarea name="sender_exclude" placeholder="spam@example.com, noreply@service.com" rows="3">{{ filter.sender_exclude or '' }}</textarea>
+                    <small>Emails from these addresses will NOT be synced. Comma-separated.</small>
+                </div>
+            </div>
+
+            <!-- Subject Filters -->
+            <div class="form-section">
+                <h3>[TEXT] Subject Filters</h3>
+                
+                <div class="form-group">
+                    <label>Include Keywords (CONTAIN these words):</label>
+                    <textarea name="subject_keywords" placeholder="invoice, report, important" rows="3">{{ filter.subject_keywords or '' }}</textarea>
+                    <small>Only sync emails with subjects containing these words. Comma-separated.</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Exclude Keywords (AVOID these words):</label>
+                    <textarea name="subject_exclude" placeholder="spam, test, draft" rows="3">{{ filter.subject_exclude or '' }}</textarea>
+                    <small>Skip emails with subjects containing these words. Comma-separated.</small>
+                </div>
+            </div>
+
+            <!-- Attachment Filter -->
+            <div class="form-section">
+                <h3>[FILE] Attachment Filter</h3>
+                
+                <div class="form-group checkbox">
+                    <input type="checkbox" name="has_attachments_only" value="1" 
+                           {% if filter.has_attachments_only %}checked{% endif %}>
+                    <label>Only sync emails WITH attachments</label>
+                    <small>Uncheck to sync all emails regardless of attachments</small>
+                </div>
+            </div>
+
+            <!-- Automation Settings -->
+            <div class="form-section">
+                <h3>[AUTO] Automation Settings (Coming Soon)</h3>
+                
+                <div class="form-group checkbox disabled">
+                    <input type="checkbox" disabled>
+                    <label>Enable Automatic Sync</label>
+                    <small>[DISABLED] Feature coming in next update</small>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">[SAVE] Save Filters</button>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">[CANCEL] Cancel</a>
+            </div>
+        </form>
+
+        <!-- Filter Preview -->
+        <div class="filter-preview">
+            <h3>[INFO] Current Filter Summary</h3>
+            <div class="preview-content">
+                {% if filter %}
+                    <p><strong>Sync Range:</strong> Last {{ filter.days_back }} days</p>
+                    <p><strong>Max Results:</strong> {{ filter.max_results }} emails</p>
+                    {% if filter.sender_include %}
+                        <p><strong>Senders (Whitelist):</strong> {{ filter.sender_include }}</p>
+                    {% endif %}
+                    {% if filter.sender_exclude %}
+                        <p><strong>Senders (Blacklist):</strong> {{ filter.sender_exclude }}</p>
+                    {% endif %}
+                    {% if filter.subject_keywords %}
+                        <p><strong>Subject Keywords:</strong> {{ filter.subject_keywords }}</p>
+                    {% endif %}
+                    {% if filter.has_attachments_only %}
+                        <p><strong>[FILE] Filter:</strong> Only emails with attachments</p>
+                    {% endif %}
+                {% else %}
+                    <p>No filters configured yet. Using defaults.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.configure-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.config-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.config-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    text-align: center;
+}
+
+.config-header h1 {
+    font-size: 1.8em;
+    margin: 0 0 10px 0;
+}
+
+.config-header p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+.filter-form {
+    padding: 30px;
+}
+
+.form-section {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.form-section h3 {
+    color: #333;
+    margin-top: 0;
+    font-size: 1.2em;
+    margin-bottom: 15px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 1em;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="number"]:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-group small {
+    display: block;
+    color: #999;
+    margin-top: 5px;
+    font-size: 0.9em;
+}
+
+.form-group.checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-group.checkbox input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+.form-group.checkbox label {
+    margin: 0;
+    font-weight: 500;
+}
+
+.form-group.checkbox.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.form-group.checkbox.disabled input {
+    cursor: not-allowed;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+.filter-preview {
+    background: #f0f7ff;
+    padding: 20px;
+    margin: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+.filter-preview h3 {
+    margin-top: 0;
+    color: #333;
+}
+
+.preview-content {
+    background: white;
+    padding: 15px;
+    border-radius: 6px;
+    font-size: 0.95em;
+}
+
+.preview-content p {
+    margin: 8px 0;
+    color: #555;
+}
+
+.preview-content strong {
+    color: #333;
+}
+
+@media (max-width: 600px) {
+    .configure-container {
+        padding: 10px;
+    }
+    
+    .filter-form {
+        padding: 15px;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+</style>
+{% endblock %}

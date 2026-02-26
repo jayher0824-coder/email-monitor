@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}{{ document.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">{{ document.title }}</h4>
+                    <form method="POST" action="{{ url_for('favorite_document', doc_id=document.id) }}" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm" title="Add to favorites">
+                            {% if document.is_favorite %}
+                            <i class="bi bi-star-fill text-warning"></i>
+                            {% else %}
+                            <i class="bi bi-star"></i>
+                            {% endif %}
+                        </button>
+                    </form>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <p><strong>Sender:</strong> {{ document.sender }}</p>
+                            <p><strong>Recipient:</strong> {{ document.recipient }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Direction:</strong> 
+                                {% if document.direction == 'incoming' %}
+                                <span class="badge bg-info">Incoming</span>
+                                {% else %}
+                                <span class="badge bg-success">Outgoing</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Status:</strong> <span class="badge bg-primary">{{ document.status }}</span></p>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6>Description</h6>
+                    <p>{{ document.description }}</p>
+                    
+                    <hr>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>File:</strong> {{ document.file_name }}</p>
+                            <p><strong>Size:</strong> {{ (document.file_size / 1024 / 1024) | round(2) }} MB</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Created:</strong> {{ document.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                            <p><strong>Views:</strong> {{ document.viewed_count }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-light">
+                    <a href="{{ url_for('download_document', doc_id=document.id) }}" class="btn btn-primary">
+                        <i class="bi bi-download"></i> Download
+                    </a>
+                    <form method="POST" action="{{ url_for('archive_document', doc_id=document.id) }}" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-archive"></i> Archive
+                        </button>
+                    </form>
+                    <a href="{{ url_for('documents') }}" class="btn btn-secondary">Back</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">Tags</div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('tag_document', doc_id=document.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <select name="tag_id" class="form-select mb-2">
+                            <option value="">Select a tag to add...</option>
+                            {% for tag in available_tags %}
+                            <option value="{{ tag.id }}">{{ tag.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-primary btn-sm w-100">Add Tag</button>
+                    </form>
+                    
+                    <div class="mt-3">
+                        {% for tag in document.tags %}
+                        <span class="badge" style="background-color: {{ tag.color }}; color: white;">{{ tag.name }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

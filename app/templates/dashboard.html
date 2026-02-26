@@ -1,0 +1,510 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Document Management{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1>Document Management System</h1>
+        <p>Welcome, <strong>{{ user.email }}</strong></p>
+    </div>
+
+    <!-- Main Workflow Choice -->
+    <div class="workflow-section">
+        <h2>What would you like to do?</h2>
+        
+        <div class="workflow-buttons">
+            <!-- Incoming Documents -->
+            <div class="workflow-card incoming">
+                <div class="workflow-icon">📥</div>
+                <h3>Incoming</h3>
+                <p>Receive and log incoming documents</p>
+                <a href="{{ url_for('receive_document') }}" class="btn btn-primary btn-lg">
+                    Receive Document
+                </a>
+            </div>
+
+            <!-- Outgoing Documents -->
+            <div class="workflow-card outgoing">
+                <div class="workflow-icon">📤</div>
+                <h3>Outgoing</h3>
+                <p>Prepare and send outgoing documents</p>
+                <a href="{{ url_for('prepare_document') }}" class="btn btn-success btn-lg">
+                    Prepare Document
+                </a>
+            </div>
+
+            <!-- Gmail Integration -->
+            <div class="workflow-card gmail">
+                <div class="workflow-icon">📧</div>
+                <h3>Gmail Sync</h3>
+                <p>Import emails from your Gmail account</p>
+                <a href="{{ url_for('setup_gmail') }}" class="btn btn-info btn-lg">
+                    📧 Setup Gmail
+                </a>
+            </div>
+
+            <!-- Configure Sync -->
+            <div class="workflow-card config">
+                <div class="workflow-icon">[GEAR]</div>
+                <h3>Configure Sync</h3>
+                <p>Set filter preferences for email syncing</p>
+                <a href="{{ url_for('configure_sync') }}" class="btn btn-warning btn-lg">
+                    [GEAR] Configure Filters
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin: Pending Approvals Section -->
+    {% if user.role == 'admin' and pending_approvals %}
+        <div class="approvals-section">
+            <div class="section-header">
+                <h2>⏳ Pending Approvals</h2>
+                <a href="{{ url_for('view_approvals') }}" class="btn btn-secondary">View All</a>
+            </div>
+            <div class="approvals-grid">
+                {% for approval in pending_approvals %}
+                    <div class="approval-item">
+                        <div class="approval-item-header">
+                            <h4>{{ approval.document.title }}</h4>
+                            <span class="badge badge-warning">PENDING</span>
+                        </div>
+                        <p class="approval-submitter">📝 Submitted by: <strong>{{ approval.requester.full_name or approval.requester.email }}</strong></p>
+                        <p class="approval-date">📅 {{ approval.requested_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                        <a href="{{ url_for('view_approval_detail', approval_id=approval.id) }}" class="btn btn-sm btn-primary">
+                            Review Document
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- User: Pending Submissions Section -->
+    {% if user.role != 'admin' and pending_approvals %}
+        <div class="submissions-section">
+            <div class="section-header">
+                <h2>📤 Your Submissions</h2>
+                <a href="{{ url_for('documents') }}" class="btn btn-secondary">View All</a>
+            </div>
+            <div class="submissions-grid">
+                {% for approval in pending_approvals %}
+                    <div class="submission-item" style="border-left-color: 
+                        {% if approval.status == 'pending' %}#f59e0b
+                        {% elif approval.status == 'approved' %}#10b981
+                        {% elif approval.status == 'rejected' %}#ef4444
+                        {% else %}#f59e0b
+                        {% endif %};">
+                        <div class="submission-header">
+                            <h4>{{ approval.document.title }}</h4>
+                            <span class="badge badge-{{ approval.status }}">{{ approval.status | upper }}</span>
+                        </div>
+                        <p class="submission-date">📅 {{ approval.requested_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                        {% if approval.status == 'needs_revision' %}
+                            <p class="revision-note">✏️ Revision required - see document for details</p>
+                        {% endif %}
+                        <a href="{{ url_for('view_document', doc_id=approval.document.id) }}" class="btn btn-sm btn-primary">
+                            View Details
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Quick Stats -->
+    <div class="stats-section">
+        <h2>Document Statistics</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">📄</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ total_docs }}</div>
+                    <div class="stat-label">Total Documents</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">📥</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ incoming_count }}</div>
+                    <div class="stat-label">Incoming</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">📤</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ outgoing_count }}</div>
+                    <div class="stat-label">Outgoing</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">📦</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ filed_count }}</div>
+                    <div class="stat-label">Filed</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Archive/Search -->
+    <div class="archive-section">
+        <h2>Document Archive</h2>
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search documents by title, sender, or recipient...">
+            <a href="{{ url_for('view_archive') }}" class="btn btn-secondary">View All Documents</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.dashboard-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.dashboard-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.dashboard-header h1 {
+    font-size: 2.5em;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.workflow-section {
+    margin-bottom: 50px;
+}
+
+.workflow-section h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #333;
+}
+
+.workflow-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    margin-bottom: 40px;
+}
+
+.workflow-card {
+    background: white;
+    border-radius: 12px;
+    padding: 40px 30px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.workflow-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+}
+
+.workflow-card.incoming {
+    border-top: 5px solid #3498db;
+}
+
+.workflow-card.outgoing {
+    border-top: 5px solid #2ecc71;
+}
+
+.workflow-card.gmail {
+    border-top: 5px solid #e74c3c;
+}
+
+.workflow-card.config {
+    border-top: 5px solid #f39c12;
+}
+
+.workflow-icon {
+    font-size: 3em;
+    margin-bottom: 20px;
+}
+
+.workflow-card h3 {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.workflow-card p {
+    color: #666;
+    margin-bottom: 25px;
+}
+
+.approvals-section,
+.submissions-section {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    margin-bottom: 40px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.section-header h2 {
+    margin: 0;
+    color: #333;
+}
+
+.approvals-grid,
+.submissions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.approval-item,
+.submission-item {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.submission-item {
+    border-left: 4px solid #f59e0b;
+}
+
+.approval-item:hover,
+.submission-item:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.approval-item-header,
+.submission-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 10px;
+}
+
+.approval-item-header h4,
+.submission-header h4 {
+    margin: 0;
+    color: #333;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.approval-submitter,
+.submission-date,
+.revision-note {
+    margin: 8px 0;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.revision-note {
+    color: #f59e0b;
+    font-weight: 500;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75em;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.badge-warning {
+    background: #fef08a;
+    color: #92400e;
+}
+
+.badge-pending {
+    background: #fef08a;
+    color: #92400e;
+}
+
+.badge-approved {
+    background: #bbf7d0;
+    color: #065f46;
+}
+
+.badge-rejected {
+    background: #fecaca;
+    color: #7f1d1d;
+}
+
+.badge-needs_revision {
+    background: #fed7aa;
+    color: #92400e;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.85em;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.stats-section {
+    background: #f8f9fa;
+    padding: 40px;
+    border-radius: 12px;
+    margin-bottom: 40px;
+}
+
+.stats-section h2 {
+    margin-bottom: 30px;
+    color: #333;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.stat-icon {
+    font-size: 2.5em;
+    min-width: 60px;
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-value {
+    font-size: 1.8em;
+    font-weight: bold;
+    color: #333;
+}
+
+.stat-label {
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 5px;
+}
+
+.archive-section {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.archive-section h2 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.search-bar {
+    display: flex;
+    gap: 10px;
+}
+
+.search-bar input {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1em;
+}
+
+.search-bar input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+}
+
+.btn-info {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-info:hover {
+    background: #c0392b;
+}
+
+.btn-warning {
+    background: #f39c12;
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #d68910;
+}
+
+.btn-secondary {
+    background: #e5e7eb;
+    color: #333;
+    font-weight: 500;
+}
+
+.btn-secondary:hover {
+    background: #d1d5db;
+}
+
+.btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s ease;
+    font-size: 0.95em;
+}
+
+.btn-lg {
+    padding: 12px 24px;
+    font-size: 1em;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2980b9;
+}
+
+.btn-success {
+    background: #2ecc71;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #27ae60;
+}
+
+</style>
+{% endblock %}

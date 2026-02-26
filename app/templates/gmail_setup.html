@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Gmail Setup - Email Monitor{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="fab fa-google"></i> Gmail Integration Setup
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    {% if is_configured %}
+                    <div class="alert alert-success" role="alert">
+                        <i class="fas fa-check-circle"></i>
+                        <strong>Gmail Connected!</strong> Your Gmail account is already connected.
+                    </div>
+                    
+                    <div class="text-center mb-3">
+                        <button class="btn btn-secondary" onclick="goToConfigure()">
+                            <i class="fas fa-cogs"></i> Configure Sync Settings
+                        </button>
+                    </div>
+                    {% else %}
+                    <p class="lead mb-4">
+                        Connect your Gmail account to automatically sync emails as documents. Your documents will be securely stored and organized.
+                    </p>
+                    
+                    <div class="alert alert-info" role="alert">
+                        <strong><i class="fas fa-info-circle"></i> How it works:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>You'll be redirected to Google to authorize Email Monitor</li>
+                            <li>We'll use read-only access to fetch your emails</li>
+                            <li>Emails with documents/attachments are converted to documents</li>
+                            <li>You can set up filters to sync specific senders or subjects</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="alert alert-warning" role="alert">
+                        <strong><i class="fas fa-shield-alt"></i> Security:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Your Gmail credentials are encrypted before storage</li>
+                            <li>2FA is required for Gmail operations</li>
+                            <li>All sync activities are logged for audit</li>
+                            <li>You can disconnect at any time</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <a href="{{ auth_url }}" class="btn btn-primary btn-lg">
+                            <i class="fab fa-google"></i> Authorize with Google
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if is_configured %}
+            <div class="card shadow mt-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-tools"></i> Gmail Management</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-primary btn-block" onclick="manualSync()">
+                                <i class="fas fa-sync"></i> Manual Sync Now
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-danger btn-block" onclick="disconnectGmail()" id="disconnectBtn">
+                                <i class="fas fa-sign-out-alt"></i> Disconnect Gmail
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function goToConfigure() {
+    window.location.href = '{{ url_for("gmail_configure") }}';
+}
+
+function manualSync() {
+    const btn = event.target.closest('button');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+    
+    fetch('{{ url_for("gmail_sync") }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: new FormData()
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(`✅ Sync complete!\nCreated: ${data.created} documents\nTotal retrieved: ${data.total}`);
+            btn.innerHTML = '<i class="fas fa-sync"></i> Manual Sync Now';
+            btn.disabled = false;
+        } else {
+            alert('❌ ' + data.error);
+            btn.innerHTML = '<i class="fas fa-sync"></i> Manual Sync Now';
+            btn.disabled = false;
+        }
+    })
+    .catch(e => {
+        alert('Error: ' + e.message);
+        btn.innerHTML = '<i class="fas fa-sync"></i> Manual Sync Now';
+        btn.disabled = false;
+    });
+}
+
+function disconnectGmail() {
+    if (!confirm('Are you sure you want to disconnect Gmail? This will not delete existing synced documents.')) {
+        return;
+    }
+    
+    const btn = document.getElementById('disconnectBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Disconnecting...';
+    
+    fetch('{{ url_for("gmail_disconnect") }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ Gmail disconnected successfully');
+            location.reload();
+        } else {
+            alert('❌ ' + data.error);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Disconnect Gmail';
+        }
+    })
+    .catch(e => {
+        alert('Error: ' + e.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Disconnect Gmail';
+    });
+}
+</script>
+
+<style>
+.card {
+    border: none;
+    border-radius: 8px;
+}
+
+.card-header {
+    border-radius: 8px 8px 0 0;
+}
+
+.btn-block {
+    width: 100%;
+}
+
+.fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+{% endblock %}

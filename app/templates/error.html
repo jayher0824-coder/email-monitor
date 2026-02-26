@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Email Monitor{% endblock %}
+
+{% block content %}
+<style>
+    .error-container {
+        max-width: 600px;
+        margin: 60px auto;
+        padding: 40px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 10px;
+        color: white;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+
+    .error-icon {
+        font-size: 64px;
+        margin-bottom: 20px;
+    }
+
+    .error-container h1 {
+        font-size: 28px;
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+
+    .error-message {
+        background: rgba(255, 255, 255, 0.15);
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+        font-size: 14px;
+        text-align: left;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        border-left: 4px solid #ffeb3b;
+    }
+
+    .error-details {
+        margin: 20px 0;
+        font-size: 13px;
+        opacity: 0.9;
+        line-height: 1.6;
+    }
+
+    .error-actions {
+        margin-top: 30px;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .error-actions a {
+        display: inline-block;
+        padding: 12px 24px;
+        background: white;
+        color: #667eea;
+        text-decoration: none;
+        border-radius: 5px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+
+    .error-actions a:hover {
+        background: #f0f0f0;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .error-actions .btn-secondary {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 2px solid white;
+    }
+
+    .error-actions .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+</style>
+
+<div class="error-container">
+    <div class="error-icon">⚠️</div>
+    <h1>{{ title }}</h1>
+    
+    <div class="error-message">
+        <strong>Error Details:</strong><br>
+        {{ error }}
+    </div>
+
+    <div class="error-details">
+        <p><strong>What went wrong:</strong></p>
+        <ul style="text-align: left; display: inline-block;">
+            <li>Your Gmail OAuth credentials might be incorrect or expired</li>
+            <li>The authorization code might have expired (valid for ~10 minutes)</li>
+            <li>There could be a misconfiguration in the OAuth settings</li>
+            <li>Your Google Cloud project might have issues with the redirect URI</li>
+        </ul>
+    </div>
+
+    <div class="error-actions">
+        <a href="{{ url_for('index') }}">← Back to Dashboard</a>
+        <a href="{{ url_for('connect_gmail') }}" class="btn-secondary">🔄 Try Again</a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,654 @@
+{% extends "base.html" %}
+
+{% block title %}User Details - Admin Portal{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="detail-header">
+        <a href="{{ url_for('admin_users') }}" class="back-btn">← Back to Users</a>
+        <h1>👤 User Details</h1>
+    </div>
+
+    <div class="detail-wrapper">
+        <!-- User Information Panel -->
+        <div class="info-panel">
+            <h2>Account Information</h2>
+            
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Email</label>
+                    <p>{{ user.email }}</p>
+                </div>
+                <div class="info-item">
+                    <label>Full Name</label>
+                    <p>{{ user.full_name or 'Not set' }}</p>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Role</label>
+                    <p><span class="badge badge-{{ user.role }}">{{ user.role | upper }}</span></p>
+                </div>
+                <div class="info-item">
+                    <label>Status</label>
+                    <p>
+                        {% if user.is_active %}
+                            <span class="badge badge-active">✅ Active</span>
+                        {% else %}
+                            <span class="badge badge-inactive">❌ Inactive</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Two-Factor Authentication</label>
+                    <p>
+                        {% if user.two_factor_enabled %}
+                            <span class="badge badge-2fa">🔐 Enabled</span>
+                        {% else %}
+                            <span class="badge badge-disabled">⚠️ Disabled</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="info-item">
+                    <label>Gmail Connected</label>
+                    <p>
+                        {% if user.gmail_connected %}
+                            <span class="badge badge-connected">📧 Connected</span>
+                        {% else %}
+                            <span class="badge badge-disconnected">📧 Not Connected</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Account Created</label>
+                    <p>{{ user.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                </div>
+                <div class="info-item">
+                    <label>Last Login</label>
+                    <p>{% if user.last_login %}{{ user.last_login.strftime('%Y-%m-%d %H:%M:%S') }}{% else %}Never{% endif %}</p>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Last Password Change</label>
+                    <p>
+                        {% if user.last_password_change %}
+                            {{ user.last_password_change.strftime('%Y-%m-%d') }}
+                        {% else %}
+                            Never
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="info-item">
+                    <label>Account Locked</label>
+                    <p>
+                        {% if user.is_locked() %}
+                            <span class="badge badge-danger">🔒 Locked</span>
+                        {% else %}
+                            <span class="badge badge-success">🔓 Unlocked</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Document Statistics -->
+            <div class="stats-section">
+                <h3>Document Statistics</h3>
+                <div class="stats-grid">
+                    <div class="stat">
+                        <div class="stat-value">{{ doc_count }}</div>
+                        <div class="stat-label">Total Documents</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">{{ incoming_count }}</div>
+                        <div class="stat-label">Incoming</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">{{ outgoing_count }}</div>
+                        <div class="stat-label">Outgoing</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Actions -->
+            <div class="actions-section">
+                <h3>Admin Actions</h3>
+                <div class="action-buttons">
+                    {% if user.is_active %}
+                        <button onclick="deactivateUserDetail()" class="btn btn-warning btn-block">
+                            🔒 Deactivate Account
+                        </button>
+                    {% else %}
+                        <button onclick="activateUserDetail()" class="btn btn-success btn-block">
+                            🔓 Activate Account
+                        </button>
+                    {% endif %}
+                    
+                    <button onclick="resetPasswordDetail()" class="btn btn-info btn-block">
+                        🔑 Reset Password
+                    </button>
+                    
+                    <button onclick="deleteUserDetail()" class="btn btn-danger btn-block" style="margin-top: 10px;">
+                        🗑️ Delete User
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audit Logs and Activity -->
+        <div class="activity-panel">
+            <!-- Login History -->
+            <div class="activity-section">
+                <h2>Recent Login History</h2>
+                {% if login_history %}
+                    <div class="timeline">
+                        {% for entry in login_history %}
+                            <div class="timeline-item">
+                                <div class="timeline-marker {% if entry.success %}success{% else %}fail{% endif %}">
+                                    {% if entry.success %}✅{% else %}❌{% endif %}
+                                </div>
+                                <div class="timeline-content">
+                                    <p class="timeline-title">
+                                        {% if entry.success %}
+                                            Successful Login
+                                        {% else %}
+                                            Failed Login Attempt
+                                        {% endif %}
+                                    </p>
+                                    <p class="timeline-meta">
+                                        📅 {{ entry.login_time.strftime('%Y-%m-%d %H:%M:%S') }} |
+                                        🌐 {{ entry.ip_address or 'Unknown' }}
+                                        {% if entry.failure_reason %}
+                                            | ⚠️ {{ entry.failure_reason }}
+                                        {% endif %}
+                                    </p>
+                                    <p class="timeline-agent">
+                                        <small>{{ entry.user_agent[:80] if entry.user_agent else 'Unknown' }}</small>
+                                    </p>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="empty-message">No login history</p>
+                {% endif %}
+            </div>
+
+            <!-- Audit Logs -->
+            <div class="activity-section">
+                <h2>Audit Logs</h2>
+                {% if audit_logs %}
+                    <div class="logs-list">
+                        {% for log in audit_logs %}
+                            <div class="log-entry">
+                                <div class="log-action">{{ log.action | replace('_', ' ') | title }}</div>
+                                <div class="log-details">
+                                    <p class="log-resource">
+                                        Resource: <strong>{{ log.resource_type or 'N/A' }}</strong> (ID: {{ log.resource_id or 'N/A' }})
+                                    </p>
+                                    {% if log.changes %}
+                                        <p class="log-changes">Changes: {{ log.changes }}</p>
+                                    {% endif %}
+                                    <p class="log-timestamp">
+                                        📅 {{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }} |
+                                        🌐 {{ log.ip_address or 'Unknown' }}
+                                    </p>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="empty-message">No audit logs</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.admin-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.detail-header {
+    margin-bottom: 30px;
+}
+
+.back-btn {
+    display: inline-block;
+    margin-bottom: 15px;
+    color: #3b82f6;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.back-btn:hover {
+    color: #2563eb;
+}
+
+.detail-header h1 {
+    font-size: 2em;
+    margin: 0;
+    color: #333;
+}
+
+.detail-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+}
+
+@media (max-width: 1024px) {
+    .detail-wrapper {
+        grid-template-columns: 1fr;
+    }
+}
+
+.info-panel,
+.activity-panel {
+    background: white;
+    border-radius: 8px;
+    padding: 25px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.info-panel h2,
+.activity-panel h2,
+.activity-section h2 {
+    font-size: 1.3em;
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-item label {
+    font-weight: bold;
+    color: #666;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+}
+
+.info-item p {
+    margin: 0;
+    color: #333;
+    font-size: 0.95em;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.badge-admin {
+    background: #fecaca;
+    color: #7f1d1d;
+}
+
+.badge-user {
+    background: #bfdbfe;
+    color: #1e40af;
+}
+
+.badge-active {
+    background: #bbf7d0;
+    color: #065f46;
+}
+
+.badge-inactive {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.badge-2fa {
+    background: #c7d2fe;
+    color: #312e81;
+}
+
+.badge-disabled {
+    background: #fed7aa;
+    color: #92400e;
+}
+
+.badge-connected {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.badge-disconnected {
+    background: #f3e8ff;
+    color: #6b21a8;
+}
+
+.badge-danger {
+    background: #fecaca;
+    color: #991b1b;
+}
+
+.badge-success {
+    background: #bbf7d0;
+    color: #065f46;
+}
+
+.stats-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid #f0f0f0;
+}
+
+.stats-section h3 {
+    margin-top: 0;
+    color: #333;
+    font-size: 1em;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.stat {
+    background: #f9fafb;
+    padding: 15px;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 1.8em;
+    font-weight: bold;
+    color: #333;
+}
+
+.stat-label {
+    font-size: 0.8em;
+    color: #666;
+    margin-top: 5px;
+}
+
+.actions-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid #f0f0f0;
+}
+
+.actions-section h3 {
+    margin-top: 0;
+    color: #333;
+    font-size: 1em;
+}
+
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.btn-block {
+    width: 100%;
+    text-align: center;
+}
+
+.btn-info {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-info:hover {
+    background: #2563eb;
+}
+
+.btn-success {
+    background: #10b981;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #059669;
+}
+
+.btn-warning {
+    background: #f59e0b;
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #d97706;
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+}
+
+.activity-panel {
+    grid-column: 1 / -1;
+}
+
+.activity-section {
+    margin-bottom: 25px;
+    padding-bottom: 25px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.activity-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.timeline-item {
+    display: flex;
+    gap: 15px;
+}
+
+.timeline-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #f0f0f0;
+    font-size: 1.2em;
+    flex-shrink: 0;
+}
+
+.timeline-marker.success {
+    background: #bbf7d0;
+}
+
+.timeline-marker.fail {
+    background: #fee2e2;
+}
+
+.timeline-content {
+    flex: 1;
+}
+
+.timeline-title {
+    margin: 0 0 5px 0;
+    font-weight: 600;
+    color: #333;
+}
+
+.timeline-meta {
+    margin: 0 0 5px 0;
+    font-size: 0.85em;
+    color: #666;
+}
+
+.timeline-agent {
+    margin: 0;
+    font-size: 0.8em;
+    color: #999;
+    word-break: break-all;
+}
+
+.logs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.log-entry {
+    background: #f9fafb;
+    padding: 12px;
+    border-radius: 4px;
+    border-left: 3px solid #3b82f6;
+}
+
+.log-action {
+    font-weight: 600;
+    color: #3b82f6;
+    margin-bottom: 8px;
+}
+
+.log-details p {
+    margin: 5px 0;
+    font-size: 0.85em;
+    color: #555;
+}
+
+.log-resource {
+    margin: 0;
+}
+
+.log-changes {
+    color: #666;
+    font-style: italic;
+    margin: 5px 0 0 0;
+}
+
+.log-timestamp {
+    margin: 8px 0 0 0;
+    color: #999;
+}
+
+.empty-message {
+    color: #999;
+    font-style: italic;
+    margin: 20px 0;
+}
+</style>
+
+<script>
+var userId = {{ user.id }};
+var userEmail = '{{ user.email }}';
+
+function activateUserDetail() {
+    if (confirm(`Activate user ${userEmail}?`)) {
+        fetch(`/admin/user/${userId}/activate`, { method: 'POST' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('User activated successfully');
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(e => alert('Error: ' + e));
+    }
+}
+
+function deactivateUserDetail() {
+    if (confirm(`Deactivate user ${userEmail}?`)) {
+        fetch(`/admin/user/${userId}/deactivate`, { method: 'POST' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('User deactivated successfully');
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(e => alert('Error: ' + e));
+    }
+}
+
+function resetPasswordDetail() {
+    if (confirm(`Reset password for ${userEmail}?`)) {
+        fetch(`/admin/user/${userId}/reset-password`, { method: 'POST' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Password reset successful!\nTemporary password: ' + data.temp_password);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(e => alert('Error: ' + e));
+    }
+}
+
+function deleteUserDetail() {
+    if (confirm(`Delete user ${userEmail}? This cannot be undone.`)) {
+        if (confirm('Are you sure? All their documents will be deleted.')) {
+            fetch(`/admin/user/${userId}/delete`, { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('User deleted successfully');
+                        window.location.href = '/admin/users';
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(e => alert('Error: ' + e));
+        }
+    }
+}
+</script>
+{% endblock %}

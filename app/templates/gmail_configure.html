@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+
+{% block title %}Gmail Sync Configuration - Email Monitor{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-cogs"></i> Gmail Sync Configuration
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="alert alert-success" role="alert">
+                                <i class="fas fa-check-circle"></i> <strong>Gmail Connected</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-right">
+                            <button class="btn btn-sm btn-outline-primary" onclick="testSync()">
+                                <i class="fas fa-sync"></i> Test Sync
+                            </button>
+                            <a href="{{ url_for('gmail_setup') }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Back
+                            </a>
+                        </div>
+                    </div>
+
+                    <form id="syncForm" method="POST" action="{{ url_for('gmail_sync_config') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <!-- Email Filters Section -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0"><i class="fas fa-envelope"></i> Email Filters</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="sender_include">
+                                        <i class="fas fa-check-circle text-success"></i> Include Senders (whitelist)
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        class="form-control" 
+                                        id="sender_include" 
+                                        name="sender_include"
+                                        value="{{ sync_filter.sender_include if sync_filter else '' }}"
+                                        placeholder="e.g., boss@company.com, hr@company.com"
+                                    >
+                                    <small class="form-text text-muted">
+                                        Comma-separated list of senders to include. Leave empty to sync from all senders.
+                                    </small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="sender_exclude">
+                                        <i class="fas fa-ban text-danger"></i> Exclude Senders (blacklist)
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        class="form-control" 
+                                        id="sender_exclude" 
+                                        name="sender_exclude"
+                                        value="{{ sync_filter.sender_exclude if sync_filter else '' }}"
+                                        placeholder="e.g., spam@domain.com, notify@service.com"
+                                    >
+                                    <small class="form-text text-muted">
+                                        Comma-separated list of senders to exclude.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Subject Filters Section -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0"><i class="fas fa-tag"></i> Subject Keywords</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="subject_keywords">
+                                        <i class="fas fa-check-circle text-success"></i> Include Keywords
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        class="form-control" 
+                                        id="subject_keywords" 
+                                        name="subject_keywords"
+                                        value="{{ sync_filter.subject_keywords if sync_filter else '' }}"
+                                        placeholder="e.g., invoice, report, document"
+                                    >
+                                    <small class="form-text text-muted">
+                                        Comma-separated keywords. Only emails with these subjects are synced. Leave empty for all.
+                                    </small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="subject_exclude">
+                                        <i class="fas fa-ban text-danger"></i> Exclude Keywords
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        class="form-control" 
+                                        id="subject_exclude" 
+                                        name="subject_exclude"
+                                        value="{{ sync_filter.subject_exclude if sync_filter else '' }}"
+                                        placeholder="e.g., spam, promotional, newsletter"
+                                    >
+                                    <small class="form-text text-muted">
+                                        Comma-separated keywords to exclude from syncing.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Attachment Filters Section -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0"><i class="fas fa-paperclip"></i> Attachment Options</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="custom-control custom-checkbox">
+                                    <input 
+                                        type="checkbox" 
+                                        class="custom-control-input" 
+                                        id="has_attachments_only" 
+                                        name="has_attachments_only"
+                                        {% if sync_filter and sync_filter.has_attachments_only %}checked{% endif %}
+                                    >
+                                    <label class="custom-control-label" for="has_attachments_only">
+                                        Only sync emails with attachments
+                                    </label>
+                                </div>
+                                <small class="form-text text-muted d-block mt-2">
+                                    When checked, only emails containing document attachments (.pdf, .doc, .xlsx, etc.) will be synced.
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Auto-sync Configuration -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0"><i class="fas fa-clock"></i> Auto-Sync Settings</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="custom-control custom-checkbox">
+                                    <input 
+                                        type="checkbox" 
+                                        class="custom-control-input" 
+                                        id="auto_sync" 
+                                        name="auto_sync"
+                                        {% if sync_filter and sync_filter.auto_sync %}checked{% endif %}
+                                    >
+                                    <label class="custom-control-label" for="auto_sync">
+                                        Enable automatic syncing
+                                    </label>
+                                </div>
+
+                                <div class="form-group mt-3" id="syncFrequencyGroup" style="{% if not (sync_filter and sync_filter.auto_sync) %}display: none;{% endif %}">
+                                    <label for="sync_frequency">Sync Frequency:</label>
+                                    <select class="form-control" id="sync_frequency" name="sync_frequency">
+                                        <option value="hourly" {% if sync_filter and sync_filter.sync_frequency == 'hourly' %}selected{% endif %}>Every hour</option>
+                                        <option value="every_6_hours" {% if sync_filter and sync_filter.sync_frequency == 'every_6_hours' %}selected{% endif %}>Every 6 hours</option>
+                                        <option value="daily" {% if sync_filter and sync_filter.sync_frequency == 'daily' %}selected{% endif %}>Daily</option>
+                                        <option value="weekly" {% if sync_filter and sync_filter.sync_frequency == 'weekly' %}selected{% endif %}>Weekly</option>
+                                    </select>
+                                </div>
+                                <small class="form-text text-muted">
+                                    Automatic sync will run in the background at the selected interval.
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <button type="submit" class="btn btn-primary btn-block">
+                                    <i class="fas fa-save"></i> Save Configuration
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                <button type="button" class="btn btn-outline-secondary btn-block" onclick="resetForm()">
+                                    <i class="fas fa-redo"></i> Reset
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Recent Sync Status -->
+            <div class="card shadow mt-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Quick Sync</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Want to sync now with current settings?</p>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-primary btn-block" onclick="syncWithDays(1)">
+                                <i class="fas fa-sync"></i> Last 24 Hours
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-primary btn-block" onclick="syncWithDays(7)">
+                                <i class="fas fa-sync"></i> Last 7 Days
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-primary btn-block" onclick="syncWithDays(30)">
+                                <i class="fas fa-sync"></i> Last 30 Days
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('auto_sync').addEventListener('change', function() {
+    document.getElementById('syncFrequencyGroup').style.display = 
+        this.checked ? 'block' : 'none';
+});
+
+function resetForm() {
+    if (confirm('Reset all filters to default?')) {
+        document.getElementById('syncForm').reset();
+    }
+}
+
+function testSync() {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+    
+    fetch('{{ url_for("gmail_sync") }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: new FormData(document.getElementById('syncForm'))
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(`✅ Test sync successful!\n\nCreated: ${data.created}\nUpdated: ${data.updated}\nTotal: ${data.total}`);
+        } else {
+            alert('❌ ' + (data.error || 'Unknown error'));
+        }
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync"></i> Test Sync';
+    })
+    .catch(e => {
+        alert('❌ Error: ' + e.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync"></i> Test Sync';
+    });
+}
+
+function syncWithDays(days) {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+    
+    const formData = new FormData();
+    formData.append('days', days);
+    
+    fetch('{{ url_for("gmail_sync") }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(`✅ Sync complete!\n\nCreated: ${data.created}\nUpdated: ${data.updated}\nTotal: ${data.total}`);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        } else {
+            alert('❌ ' + (data.error || 'Unknown error'));
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    })
+    .catch(e => {
+        alert('❌ Error: ' + e.message);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+}
+</script>
+
+<style>
+.card {
+    border: none;
+    border-radius: 8px;
+}
+
+.card-header {
+    border-radius: 8px 8px 0 0;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.btn-block {
+    width: 100%;
+}
+
+.fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.custom-control-label {
+    margin-bottom: 0;
+    font-weight: 500;
+}
+
+small {
+    display: block;
+    margin-top: 0.5rem;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Documents{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>Documents</h2>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('upload_document') }}" class="btn btn-primary">
+                <i class="bi bi-cloud-upload"></i> Upload Document
+            </a>
+        </div>
+    </div>
+    
+    <!-- Search & Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-5">
+                    <input type="text" name="search" class="form-control" placeholder="Search documents..." 
+                           value="{{ current_search }}">
+                </div>
+                <div class="col-md-2">
+                    <select name="direction" class="form-select">
+                        <option value="">All Directions</option>
+                        <option value="incoming" {% if current_direction == 'incoming' %}selected{% endif %}>Incoming</option>
+                        <option value="outgoing" {% if current_direction == 'outgoing' %}selected{% endif %}>Outgoing</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="priority" class="form-select">
+                        <option value="">All Priorities</option>
+                        <option value="low" {% if current_priority == 'low' %}selected{% endif %}>Low</option>
+                        <option value="normal" {% if current_priority == 'normal' %}selected{% endif %}>Normal</option>
+                        <option value="high" {% if current_priority == 'high' %}selected{% endif %}>High</option>
+                        <option value="urgent" {% if current_priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100">Search</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Documents Table -->
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Title</th>
+                        <th>Sender/Recipient</th>
+                        <th>Direction</th>
+                        <th>Priority</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in documents.items %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('view_document', doc_id=doc.id) }}">{{ doc.title }}</a>
+                            {% if doc.is_favorite %}<i class="bi bi-star-fill text-warning"></i>{% endif %}
+                        </td>
+                        <td>
+                            {% if doc.direction == 'incoming' %}
+                                {{ doc.sender }}
+                            {% else %}
+                                {{ doc.recipient }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if doc.direction == 'incoming' %}
+                                <span class="badge bg-info">Incoming</span>
+                            {% else %}
+                                <span class="badge bg-success">Outgoing</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if doc.priority == 'urgent' %}
+                                <span class="badge bg-danger">Urgent</span>
+                            {% elif doc.priority == 'high' %}
+                                <span class="badge bg-warning text-dark">High</span>
+                            {% elif doc.priority == 'low' %}
+                                <span class="badge bg-secondary">Low</span>
+                            {% else %}
+                                <span class="badge bg-info text-dark">Normal</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ doc.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <a href="{{ url_for('view_document', doc_id=doc.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                            <a href="{{ url_for('download_document', doc_id=doc.id) }}" class="btn btn-sm btn-outline-success">Download</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    {% if documents.pages > 1 %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if documents.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('documents', page=documents.prev_num, search=current_search, direction=current_direction, priority=current_priority) }}">Previous</a>
+            </li>
+            {% endif %}
+            
+            {% for page_num in documents.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num == documents.page %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('documents', page=page_num, search=current_search, direction=current_direction, priority=current_priority) }}">{{ page_num }}</a>
+                    </li>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+            
+            {% if documents.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('documents', page=documents.next_num, search=current_search, direction=current_direction, priority=current_priority) }}">Next</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

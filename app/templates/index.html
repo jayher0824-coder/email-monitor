@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Email Monitor{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="dashboard-header">
+        <div>
+            <h2>Welcome, {{ user.email }}</h2>
+            <p class="last-sync">Last synced: {% if user.last_sync %}{{ user.last_sync.strftime('%Y-%m-%d %H:%M') }}{% else %}Never{% endif %}</p>
+        </div>
+        <div class="header-buttons">
+            {% if not user.access_token %}
+            <a href="{{ url_for('connect_gmail') }}" class="btn btn-success btn-lg">
+                📧 Connect Gmail Account
+            </a>
+            {% else %}
+            <button class="btn btn-success btn-lg" disabled style="opacity: 0.6;">✅ Gmail Connected</button>
+            {% endif %}
+            <button class="btn btn-primary btn-lg" onclick="syncEmails()">🔄 Sync Emails Now</button>
+        </div>
+    </div>
+    
+    <div class="sync-status" id="syncStatus" style="display: none;">
+        <span id="syncMessage"></span>
+    </div>
+    
+    <!-- Quick Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">📧</div>
+            <div class="stat-content">
+                <div class="stat-value" id="total-stat">{{ stats.total_emails }}</div>
+                <div class="stat-label">Total Emails</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">📥</div>
+            <div class="stat-content">
+                <div class="stat-value" id="incoming-stat">{{ stats.incoming }}</div>
+                <div class="stat-label">Incoming</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">📤</div>
+            <div class="stat-content">
+                <div class="stat-value" id="outgoing-stat">{{ stats.outgoing }}</div>
+                <div class="stat-label">Outgoing</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">👁️</div>
+            <div class="stat-content">
+                <div class="stat-value" id="unread-stat">{{ stats.unread }}</div>
+                <div class="stat-label">Unread</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Categories Section -->
+    <div class="categories-section">
+        <h3>📂 Email Categories</h3>
+        <div class="categories-grid">
+            <div class="category-card" onclick="filterByCategory('inbox')">
+                <div class="category-icon">📬</div>
+                <div class="category-name">Inbox</div>
+                <div class="category-count" id="inbox-count">0</div>
+            </div>
+            <div class="category-card" onclick="filterByCategory('sent')">
+                <div class="category-icon">📨</div>
+                <div class="category-name">Sent</div>
+                <div class="category-count" id="sent-count">0</div>
+            </div>
+            <div class="category-card" onclick="filterByCategory('work')">
+                <div class="category-icon">💼</div>
+                <div class="category-name">Work</div>
+                <div class="category-count" id="work-count">0</div>
+            </div>
+            <div class="category-card" onclick="filterByCategory('general')">
+                <div class="category-icon">📌</div>
+                <div class="category-name">General</div>
+                <div class="category-count" id="general-count">0</div>
+            </div>
+            <div class="category-card" onclick="filterByCategory('attachments')">
+                <div class="category-icon">📎</div>
+                <div class="category-name">Documents</div>
+                <div class="category-count" id="attachments-count">{{ stats.with_attachments }}</div>
+            </div>
+            <div class="category-card" onclick="filterByCategory('starred')">
+                <div class="category-icon">⭐</div>
+                <div class="category-name">Starred</div>
+                <div class="category-count" id="starred-count">0</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Analytics Section -->
+    <div class="analytics-section">
+        <h3>📊 Analytics</h3>
+        <div class="analytics-grid">
+            <div class="chart-container">
+                <h4>Incoming vs Outgoing</h4>
+                <canvas id="directionChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h4>Email Distribution</h4>
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Emails -->
+    <div class="content-section">
+        <h3>📮 Recent Emails</h3>
+        <div class="email-list">
+            {% if recent_emails %}
+                {% for email in recent_emails %}
+                <div class="email-item">
+                    <div class="email-direction {% if email.direction == 'in' %}incoming{% else %}outgoing{% endif %}">
+                        {% if email.direction == 'in' %}📥{% else %}📤{% endif %}
+                    </div>
+                    <div class="email-content">
+                        <div class="email-header">
+                            <span class="email-subject">{{ email.subject[:60] or '(No Subject)' }}</span>
+                            {% if email.has_attachment %}
+                            <span class="email-attachment">📎</span>
+                            {% endif %}
+                            {% if email.is_starred %}
+                            <span class="email-starred">⭐</span>
+                            {% endif %}
+                            {% if not email.is_read %}
+                            <span class="email-unread">●</span>
+                            {% endif %}
+                        </div>
+                        <div class="email-from">
+                            {% if email.direction == 'in' %}
+                            From: {{ email.sender[:50] or 'Unknown' }}
+                            {% else %}
+                            To: {{ email.recipient[:50] or 'Unknown' }}
+                            {% endif %}
+                        </div>
+                        <div class="email-snippet">{{ email.snippet[:100] }}</div>
+                        <div class="email-meta">
+                            <span class="email-date">{{ email.received_at.strftime('%b %d, %Y') if email.received_at else 'N/A' }}</span>
+                            <span class="email-category">{{ email.category }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="empty-state">
+                <p>No emails found. Click "Sync Emails Now" to load emails from your Gmail account.</p>
+            </div>
+            {% endif %}
+        </div>
+        <div class="view-all-link">
+            <a href="{{ url_for('emails') }}" class="btn btn-secondary">View All Emails →</a>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function syncEmails() {
+    const button = event.target;
+    const statusDiv = document.getElementById('syncStatus');
+    const messageSpan = document.getElementById('syncMessage');
+    
+    button.disabled = true;
+    button.textContent = '⏳ Syncing...';
+    statusDiv.style.display = 'block';
+    messageSpan.textContent = 'Syncing emails from your Gmail account...';
+    
+    fetch('{{ url_for("sync_emails") }}')
+        .then(response => response.json().then(data => ({ status: response.status, data: data })))
+        .then(({ status, data }) => {
+            if (status === 200 && data.success) {
+                messageSpan.textContent = `✅ Synced successfully! Inbox: ${data.inbox_count}, Sent: ${data.sent_count}`;
+                messageSpan.style.color = '#28a745';
+                setTimeout(() => location.reload(), 2000);
+            } else if (status === 400) {
+                messageSpan.innerHTML = `⚠️ ${data.message || data.error}<br><a href="{{ url_for('connect_gmail') }}" style="color: #3366cc; text-decoration: underline;">Click here to connect Gmail</a>`;
+                messageSpan.style.color = '#ff9800';
+            } else {
+                messageSpan.textContent = `❌ Error: ${data.error || 'Unknown error'}`;
+                messageSpan.style.color = '#d32f2f';
+            }
+        })
+        .catch(error => {
+            messageSpan.textContent = `❌ Error: ${error.message}`;
+            messageSpan.style.color = '#d32f2f';
+        })
+        .finally(() => {
+            button.disabled = false;
+            button.textContent = '🔄 Sync Emails Now';
+        });
+}
+
+// Initialize charts
+function initCharts() {
+    const incoming = parseInt(document.getElementById('incoming-stat').textContent);
+    const outgoing = parseInt(document.getElementById('outgoing-stat').textContent);
+    const work = parseInt(document.getElementById('work-count').textContent) || 0;
+    const general = parseInt(document.getElementById('general-count').textContent) || 0;
+    const attachments = parseInt(document.getElementById('attachments-count').textContent) || 0;
+    
+    // Direction Chart
+    const directionCtx = document.getElementById('directionChart').getContext('2d');
+    new Chart(directionCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Incoming', 'Outgoing'],
+            datasets: [{
+                data: [incoming, outgoing],
+                backgroundColor: ['#4285F4', '#FBBC04'],
+                borderColor: ['#3367D6', '#F57C00'],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+    
+    // Category Chart with real data
+    const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+    new Chart(categoryCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Work', 'General'],
+            datasets: [{
+                label: 'Email Count',
+                data: [work, general],
+                backgroundColor: ['#34A853', '#FBBC04'],
+                borderColor: ['#1e8e3e', '#f57c00'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+function filterByCategory(category) {
+    // Map dashboard categories to filter parameters
+    const categoryMap = {
+        'inbox': '?direction=in',
+        'sent': '?direction=out',
+        'work': '?category=work',
+        'personal': '?category=personal',
+        'attachments': '?search=*',
+        'starred': '?search=*'
+    };
+    
+    // For now, redirect to emails page with appropriate filters
+    if (category === 'inbox') {
+        window.location.href = '/emails?direction=in';
+    } else if (category === 'sent') {
+        window.location.href = '/emails?direction=out';
+    } else if (category === 'work') {
+        window.location.href = '/emails?category=work';
+    } else if (category === 'personal') {
+        window.location.href = '/emails?category=personal';
+    } else if (category === 'attachments') {
+        window.location.href = '/emails';
+    } else if (category === 'starred') {
+        window.location.href = '/emails';
+    } else {
+        window.location.href = '/emails';
+    }
+}
+
+// Auto-refresh stats
+function updateStats() {
+    fetch('{{ url_for("api_stats") }}')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('total-stat').textContent = data.total_emails;
+            document.getElementById('incoming-stat').textContent = data.incoming;
+            document.getElementById('outgoing-stat').textContent = data.outgoing;
+            document.getElementById('unread-stat').textContent = data.unread;
+        });
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', function() {
+    initCharts();
+    setInterval(updateStats, 30000);
+});
+</script>
+{% endblock %}

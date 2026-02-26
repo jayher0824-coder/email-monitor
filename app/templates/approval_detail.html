@@ -1,0 +1,461 @@
+{% extends "base.html" %}
+
+{% block title %}Document Approval - Document Management{% endblock %}
+
+{% block content %}
+<div class="approval-detail-container">
+    <div class="approval-detail-header">
+        <a href="{{ url_for('view_approvals') }}" class="back-btn">← Back to Queue</a>
+        <h1>📄 Document Review & Approval</h1>
+    </div>
+
+    <div class="approval-detail-wrapper">
+        <div class="approval-main">
+            <!-- Document Information -->
+            <div class="document-section">
+                <h2>Document Information</h2>
+                
+                <div class="info-group">
+                    <div class="info-item">
+                        <label>Document Title</label>
+                        <p>{{ approval.document.title }}</p>
+                    </div>
+                    <div class="info-item">
+                        <label>Document ID</label>
+                        <p>{{ approval.document.document_id }}</p>
+                    </div>
+                </div>
+
+                <div class="info-group">
+                    <div class="info-item">
+                        <label>Direction</label>
+                        <p class="badge" style="display: inline-block;">
+                            {% if approval.document.direction == 'incoming' %}
+                                📥 Incoming
+                            {% else %}
+                                📤 Outgoing
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="info-item">
+                        <label>Priority</label>
+                        <p class="badge badge-{{ approval.document.priority }}" style="display: inline-block;">{{ approval.document.priority | upper }}</p>
+                    </div>
+                </div>
+
+                <div class="info-group">
+                    <div class="info-item">
+                        <label>From (Sender)</label>
+                        <p>{{ approval.document.sender }}</p>
+                    </div>
+                    <div class="info-item">
+                        <label>To (Recipient)</label>
+                        <p>{{ approval.document.recipient }}</p>
+                    </div>
+                </div>
+
+                <div class="info-group">
+                    <div class="info-item full-width">
+                        <label>Document Date</label>
+                        <p>{{ approval.document.document_date.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                    </div>
+                </div>
+
+                {% if approval.document.description %}
+                    <div class="info-group">
+                        <div class="info-item full-width">
+                            <label>Description</label>
+                            <p>{{ approval.document.description }}</p>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div class="info-group">
+                    <div class="info-item full-width">
+                        <label>File Information</label>
+                        <p>
+                            <strong>Name:</strong> {{ approval.document.file_name }}<br>
+                            <strong>Size:</strong> {{ (approval.document.file_size / 1024) | int }} KB<br>
+                            <strong>Hash:</strong> <code>{{ approval.document.file_hash }}</code>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="info-group">
+                    <a href="{{ url_for('download_document', doc_id=approval.document.id) }}" class="btn btn-primary">
+                        📥 Download Document
+                    </a>
+                </div>
+            </div>
+
+            <!-- Approval Information -->
+            <div class="approval-section">
+                <h2>Approval Status</h2>
+                
+                <div class="status-box" style="background: {% if approval.status == 'pending' %}#fef08a{% elif approval.status == 'approved' %}#bbf7d0{% elif approval.status == 'rejected' %}#fecaca{% else %}#fed7aa{% endif %};">
+                    <h3>
+                        {% if approval.status == 'pending' %}
+                            ⏳ Pending Review
+                        {% elif approval.status == 'approved' %}
+                            ✅ Approved
+                        {% elif approval.status == 'rejected' %}
+                            ❌ Rejected
+                        {% elif approval.status == 'needs_revision' %}
+                            ✏️ Needs Revision
+                        {% endif %}
+                    </h3>
+                    <p>
+                        <strong>Submitted by:</strong> {{ approval.requester.full_name or approval.requester.email }}<br>
+                        <strong>Submitted at:</strong> {{ approval.requested_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                    </p>
+
+                    {% if approval.approver %}
+                        <p>
+                            <strong>Last Action by:</strong> {{ approval.approver.full_name or approval.approver.email }}<br>
+                            {% if approval.approved_at %}
+                                <strong>Approved at:</strong> {{ approval.approved_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                            {% elif approval.rejected_at %}
+                                <strong>Rejected at:</strong> {{ approval.rejected_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                            {% endif %}
+                        </p>
+                    {% endif %}
+
+                    {% if approval.comments %}
+                        <div class="comments-box">
+                            <strong>Comments:</strong>
+                            <p>{{ approval.comments }}</p>
+                        </div>
+                    {% endif %}
+
+                    {% if approval.revision_notes %}
+                        <div class="revision-box">
+                            <strong>Revision Required:</strong>
+                            <p>{{ approval.revision_notes }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons (if pending) -->
+        {% if approval.status == 'pending' %}
+            <div class="approval-actions-panel">
+                <h2>Action</h2>
+
+                <!-- Approve Form -->
+                <form method="POST" action="{{ url_for('approve_document', approval_id=approval.id) }}" class="action-form">
+                    <div class="form-group">
+                        <label>Comments (Optional)</label>
+                        <textarea name="comments" class="form-textarea" placeholder="Enter approval comments..." rows="4"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-lg btn-success">✅ Approve Document</button>
+                </form>
+
+                <!-- Request Revision Form -->
+                <form method="POST" action="{{ url_for('request_revision', approval_id=approval.id) }}" class="action-form">
+                    <div class="form-group">
+                        <label>Revision Notes (Required)</label>
+                        <textarea name="revision_notes" class="form-textarea" placeholder="Specify what needs to be revised..." rows="4" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-lg btn-warning">✏️ Request Revision</button>
+                </form>
+
+                <!-- Reject Form -->
+                <form method="POST" action="{{ url_for('reject_document', approval_id=approval.id) }}" class="action-form" id="reject-form">
+                    <div class="form-group">
+                        <label>Rejection Reason (Required)</label>
+                        <textarea name="comments" class="form-textarea" placeholder="Explain why this document is rejected..." rows="4" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-lg btn-danger" onclick="return confirm('Are you sure you want to reject this document?')">❌ Reject Document</button>
+                </form>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.approval-detail-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.approval-detail-header {
+    margin-bottom: 30px;
+}
+
+.back-btn {
+    display: inline-block;
+    margin-bottom: 15px;
+    color: #3b82f6;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.back-btn:hover {
+    color: #2563eb;
+}
+
+.approval-detail-header h1 {
+    font-size: 2em;
+    margin: 0;
+    color: #333;
+}
+
+.approval-detail-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .approval-detail-wrapper {
+        grid-template-columns: 1fr;
+    }
+}
+
+.document-section,
+.approval-section {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.document-section h2,
+.approval-section h2 {
+    font-size: 1.3em;
+    margin-top: 0;
+    color: #333;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+}
+
+.info-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+    .info-group {
+        grid-template-columns: 1fr;
+    }
+}
+
+.info-group.full-width {
+    grid-template-columns: 1fr;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.info-item label {
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    color: #999;
+}
+
+.info-item p {
+    margin: 0;
+    color: #555;
+    word-break: break-word;
+}
+
+.info-item code {
+    background: #f5f5f5;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 0.85em;
+}
+
+.status-box {
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #3b82f6;
+    margin-bottom: 20px;
+}
+
+.status-box h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.status-box p {
+    margin: 5px 0;
+    color: #555;
+    font-size: 0.9em;
+}
+
+.comments-box,
+.revision-box {
+    background: white;
+    padding: 15px;
+    border-radius: 5px;
+    margin-top: 15px;
+    border-left: 3px solid #3b82f6;
+}
+
+.comments-box p,
+.revision-box p {
+    margin: 5px 0 0 0;
+    color: #555;
+    line-height: 1.5;
+}
+
+.approval-actions-panel {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 20px;
+}
+
+.approval-actions-panel h2 {
+    font-size: 1.1em;
+    margin-top: 0;
+    color: #333;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+}
+
+.action-form {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.action-form:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #333;
+    font-size: 0.9em;
+}
+
+.form-textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: Arial, sans-serif;
+    font-size: 0.9em;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.form-textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95em;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s ease;
+    width: 100%;
+    text-align: center;
+}
+
+.btn-lg {
+    padding: 12px 20px;
+    font-size: 1em;
+}
+
+.btn-primary {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2563eb;
+}
+
+.btn-success {
+    background: #10b981;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #059669;
+}
+
+.btn-warning {
+    background: #f59e0b;
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #d97706;
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.badge-low {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge-normal {
+    background: #bfdbfe;
+    color: #1e40af;
+}
+
+.badge-high {
+    background: #fed7aa;
+    color: #92400e;
+}
+
+.badge-urgent {
+    background: #fecaca;
+    color: #7f1d1d;
+}
+</style>
+{% endblock %}

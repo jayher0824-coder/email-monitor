@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Setup Two-Factor Authentication{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Setup Two-Factor Authentication</h4>
+                </div>
+                <div class="card-body">
+                    <p class="lead">Secure your account with two-factor authentication using an authenticator app.</p>
+                    
+                    <div class="alert alert-info">
+                        <strong>Step 1:</strong> Scan this QR code with an authenticator app (Google Authenticator, Authy, Microsoft Authenticator, etc.)
+                    </div>
+                    
+                    <div class="text-center mb-4">
+                        <img src="{{ qr_code }}" alt="QR Code" class="border p-3" style="max-width: 300px;">
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <strong>Can't scan?</strong> Enter this code manually:<br>
+                        <code class="fs-5">{{ secret }}</code>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <strong>Save your backup codes:</strong> Store these in a safe place in case you lose access to your authenticator.
+                        <div class="mt-2" id="backup-codes">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <form method="POST" action="{{ url_for('confirm_2fa') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="mb-3">
+                            <label for="token" class="form-label"><strong>Enter the 6-digit code from your authenticator:</strong></label>
+                            <input type="text" class="form-control form-control-lg text-center" id="token" name="token" 
+                                   placeholder="000000" maxlength="6" pattern="[0-9]{6}" required autofocus>
+                            <small class="text-muted">This verifies that your setup is working correctly</small>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-lg w-100">Confirm & Enable 2FA</button>
+                    </form>
+                    
+                    <hr>
+                    
+                    <p class="text-muted small">You can disable 2FA anytime in your settings, but it's strongly recommended to keep it enabled for security.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Generate backup codes display
+function generateBackupCodes() {
+    const codes = [];
+    for (let i = 0; i < 10; i++) {
+        codes.push(crypto.getRandomValues(new Uint8Array(4)).reduce((a, b) => a + b.toString().padStart(3, '0'), ''));
+    }
+    
+    const html = '<p><strong>Backup Codes:</strong></p>' +
+                 '<div class="bg-light p-3 rounded">' +
+                 'Save these codes somewhere safe:<br><br>' +
+                 codes.map(c => `<code>${c}</code><br>`).join('') +
+                 '<small class="d-block mt-2">Each code can only be used once if you lose your authenticator.</small>' +
+                 '</div>';
+    
+    document.getElementById('backup-codes').innerHTML = html;
+}
+
+document.addEventListener('DOMContentLoaded', generateBackupCodes);
+
+// Auto-format token input
+document.getElementById('token').addEventListener('input', function(e) {
+    this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);
+});
+</script>
+{% endblock %}

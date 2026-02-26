@@ -1,0 +1,563 @@
+{% extends "base.html" %}
+
+{% block title %}Document Archive - Document Management{% endblock %}
+
+{% block content %}
+<div class="archive-container">
+    <div class="archive-header">
+        <a href="{{ url_for('dashboard') }}" class="back-btn">← Back to Dashboard</a>
+        <h1>📦 Document Archive</h1>
+        <p>View all filed and searchable documents</p>
+    </div>
+
+    <!-- Advanced Search and Filter -->
+    <div class="search-filter-section">
+        <div class="filter-row">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search by title...">
+            </div>
+            
+            <div class="filter-input">
+                <label>Sender/From:</label>
+                <input type="text" id="filterSender" placeholder="Filter by sender...">
+            </div>
+            
+            <div class="filter-input">
+                <label>Recipient/To:</label>
+                <input type="text" id="filterRecipient" placeholder="Filter by recipient...">
+            </div>
+        </div>
+        
+        <div class="filter-row">
+            <div class="filter-input">
+                <label>Date From:</label>
+                <input type="date" id="filterDateFrom">
+            </div>
+            
+            <div class="filter-input">
+                <label>Date To:</label>
+                <input type="date" id="filterDateTo">
+            </div>
+            
+            <div class="filter-input">
+                <label>Sort By:</label>
+                <select id="sortBy">
+                    <option value="date-desc">Latest First</option>
+                    <option value="date-asc">Oldest First</option>
+                    <option value="title-asc">Title (A-Z)</option>
+                    <option value="title-desc">Title (Z-A)</option>
+                </select>
+            </div>
+            
+            <button class="btn btn-secondary" onclick="clearFilters()">Clear Filters</button>
+        </div>
+        
+        <div class="filter-buttons">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="incoming">[IN] Incoming</button>
+            <button class="filter-btn" data-filter="outgoing">[OUT] Outgoing</button>
+            <button class="filter-btn" data-filter="received">[OK] Received</button>
+            <button class="filter-btn" data-filter="sent">[SENT] Sent</button>
+        </div>
+        
+        <div class="documents-count">
+            Showing <strong id="docCount">0</strong> of <strong>{{ documents|length }}</strong> documents
+        </div>
+    </div>
+
+    <!-- Documents Table -->
+    <div class="documents-table-wrapper">
+        {% if documents %}
+        <table class="documents-table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Title</th>
+                    <th>From / To</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>File</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in documents %}
+                <tr class="doc-row" data-direction="{{ doc.direction }}" data-status="{{ doc.status }}">
+                    <td>
+                        <span class="type-badge {% if doc.direction == 'incoming' %}type-in{% else %}type-out{% endif %}">
+                            {% if doc.direction == 'incoming' %}[IN] IN{% else %}[OUT] OUT{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="doc-title">{{ doc.title }}</div>
+                    </td>
+                    <td>
+                        {% if doc.direction == 'incoming' %}
+                            <small>From:</small> {{ doc.sender }}
+                        {% else %}
+                            <small>To:</small> {{ doc.recipient }}
+                        {% endif %}
+                    </td>
+                    <td>{{ doc.document_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>
+                        <span class="status-badge status-{{ doc.status }}">
+                            {% if doc.status == 'received' %}[OK] Received
+                            {% elif doc.status == 'sent' %}[SENT] Sent
+                            {% elif doc.status == 'filed' %}[FILE] Filed
+                            {% else %}[WAIT] Pending
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        {% if doc.file_name %}
+                            <a href="{{ url_for('download_document', doc_id=doc.id) }}" class="file-link">
+                                [FILE] {{ doc.file_name }}
+                            </a>
+                        {% else %}
+                            <span class="no-file">No file</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <a href="{{ url_for('download_document', doc_id=doc.id) }}" class="action-btn download-btn" title="Download">[DOWNLOAD]</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">[EMPTY]</div>
+            <h3>No Documents Yet</h3>
+            <p>Start by receiving an incoming document or preparing an outgoing document.</p>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Go to Dashboard</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.archive-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.archive-header {
+    margin-bottom: 40px;
+}
+
+.back-btn {
+    display: inline-block;
+    margin-bottom: 20px;
+    color: #3498db;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.back-btn:hover {
+    color: #2980b9;
+}
+
+.archive-header h1 {
+    font-size: 2.5em;
+    margin: 15px 0;
+    color: #333;
+}
+
+.archive-header p {
+    color: #666;
+}
+
+.search-filter-section {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.search-box {
+    margin-bottom: 20px;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1em;
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+}
+
+.filter-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+    align-items: end;
+}
+
+.filter-input {
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-input label {
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 5px;
+}
+
+.filter-input input,
+.filter-input select {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.95em;
+    font-family: inherit;
+}
+
+.filter-input input:focus,
+.filter-input select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+}
+
+.documents-count {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 10px;
+    padding: 10px 0;
+    border-top: 1px solid #eee;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.filter-btn:hover {
+    border-color: #3498db;
+    color: #3498db;
+}
+
+.filter-btn.active {
+    background: #3498db;
+    border-color: #3498db;
+    color: white;
+}
+
+.documents-table-wrapper {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.documents-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.documents-table thead {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.documents-table th {
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+    color: #333;
+}
+
+.documents-table tbody tr {
+    border-bottom: 1px solid #dee2e6;
+    transition: background 0.2s ease;
+}
+
+.documents-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.documents-table td {
+    padding: 15px;
+}
+
+.type-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85em;
+}
+
+.type-in {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.type-out {
+    background: #e8f5e9;
+    color: #388e3c;
+}
+
+.doc-title {
+    font-weight: 500;
+    color: #333;
+    max-width: 250px;
+    word-wrap: break-word;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.status-received {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-sent {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-filed {
+    background: #cce5ff;
+    color: #004085;
+}
+
+.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.file-link {
+    color: #3498db;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.file-link:hover {
+    text-decoration: underline;
+}
+
+.no-file {
+    color: #999;
+    font-style: italic;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.action-btn {
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    line-height: 32px;
+    text-align: center;
+    border-radius: 6px;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.view-btn {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.view-btn:hover {
+    background: #1976d2;
+    color: white;
+}
+
+.download-btn {
+    background: #e8f5e9;
+    color: #388e3c;
+}
+
+.download-btn:hover {
+    background: #388e3c;
+    color: white;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.empty-icon {
+    font-size: 4em;
+    margin-bottom: 20px;
+}
+
+.empty-state h3 {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.empty-state p {
+    color: #666;
+    margin-bottom: 30px;
+}
+
+@media (max-width: 768px) {
+    .documents-table {
+        font-size: 0.9em;
+    }
+    
+    .documents-table th,
+    .documents-table td {
+        padding: 10px;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function applyAllFilters() {
+        const searchText = (document.getElementById('searchInput') || {}).value || '';
+        const filterSender = (document.getElementById('filterSender') || {}).value || '';
+        const filterRecipient = (document.getElementById('filterRecipient') || {}).value || '';
+        const filterDateFrom = (document.getElementById('filterDateFrom') || {}).value || '';
+        const filterDateTo = (document.getElementById('filterDateTo') || {}).value || '';
+        
+        let activeFilter = 'all';
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            if (btn.classList.contains('active')) {
+                activeFilter = btn.dataset.filter;
+            }
+        });
+        
+        const docRows = document.querySelectorAll('.doc-row');
+        let visibleCount = 0;
+        
+        docRows.forEach(row => {
+            let show = true;
+            
+            // Search text filter
+            if (searchText.toLowerCase()) {
+                const title = (row.cells[1] || {}).textContent || '';
+                if (!title.toLowerCase().includes(searchText.toLowerCase())) show = false;
+            }
+            
+            // Sender filter
+            if (filterSender && show) {
+                const sender = (row.cells[2] || {}).textContent || '';
+                if (!sender.toLowerCase().includes(filterSender.toLowerCase())) show = false;
+            }
+            
+            // Recipient filter
+            if (filterRecipient && show) {
+                const recipient = (row.cells[2] || {}).textContent || '';
+                if (!recipient.toLowerCase().includes(filterRecipient.toLowerCase())) show = false;
+            }
+            
+            // Date filters
+            if ((filterDateFrom || filterDateTo) && show && row.cells[3]) {
+                const dateText = row.cells[3].textContent;
+                const rowDate = new Date(dateText);
+                
+                if (filterDateFrom) {
+                    const fromDate = new Date(filterDateFrom);
+                    if (rowDate < fromDate) show = false;
+                }
+                
+                if (filterDateTo && show) {
+                    const toDate = new Date(filterDateTo);
+                    toDate.setHours(23, 59, 59);
+                    if (rowDate > toDate) show = false;
+                }
+            }
+            
+            // Type/Status filter
+            if (activeFilter !== 'all' && show) {
+                const direction = row.dataset.direction;
+                const status = row.dataset.status;
+                if (activeFilter !== direction && activeFilter !== status) show = false;
+            }
+            
+            row.style.display = show ? '' : 'none';
+            if (show) visibleCount++;
+        });
+        
+        // Update document count
+        if (document.getElementById('docCount')) {
+            document.getElementById('docCount').textContent = visibleCount;
+        }
+    }
+    
+    // Event listeners
+    const searchInput = document.getElementById('searchInput');
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    
+    if (searchInput) searchInput.addEventListener('input', applyAllFilters);
+    if (document.getElementById('filterSender')) document.getElementById('filterSender').addEventListener('input', applyAllFilters);
+    if (document.getElementById('filterRecipient')) document.getElementById('filterRecipient').addEventListener('input', applyAllFilters);
+    if (document.getElementById('filterDateFrom')) document.getElementById('filterDateFrom').addEventListener('change', applyAllFilters);
+    if (document.getElementById('filterDateTo')) document.getElementById('filterDateTo').addEventListener('change', applyAllFilters);
+    
+    // Filter button clicks
+    filterButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            filterButtons.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            applyAllFilters();
+        });
+    });
+    
+    // Initial count
+    applyAllFilters();
+});
+
+function clearFilters() {
+    const inputs = ['searchInput', 'filterSender', 'filterRecipient', 'filterDateFrom', 'filterDateTo'];
+    inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    
+    const sortBy = document.getElementById('sortBy');
+    if (sortBy) sortBy.value = 'date-desc';
+    
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    const allBtn = document.querySelector('.filter-btn[data-filter="all"]');
+    if (allBtn) allBtn.classList.add('active');
+    
+    // Trigger filtering
+    if (document.getElementById('searchInput')) {
+        document.getElementById('searchInput').dispatchEvent(new Event('input'));
+    }
+}
+</script>
+{% endblock %}
