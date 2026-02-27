@@ -38,9 +38,13 @@ class Config:
     # Session Security
     PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
     # Only require secure cookies in production (HTTPS)
-    SESSION_COOKIE_SECURE = os.environ.get('FLASK_ENV') == 'production'
+    # Detect production by RENDER_EXTERNAL_URL (always set on Render) or explicit FLASK_ENV
+    _is_production = bool(os.environ.get('RENDER_EXTERNAL_URL') or os.environ.get('FLASK_ENV') == 'production')
+    SESSION_COOKIE_SECURE = _is_production
     SESSION_COOKIE_HTTPONLY = True  # Not accessible to JavaScript
     SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
+    # Force Flask to generate https:// URLs on Render
+    PREFERRED_URL_SCHEME = 'https' if _is_production else 'http'
     SESSION_REFRESH_EACH_REQUEST = True
     
     # Password Security
